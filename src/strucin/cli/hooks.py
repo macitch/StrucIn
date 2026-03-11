@@ -54,8 +54,7 @@ def check_cycles(repo_path: Path) -> int:
         return 0
 
     print_error(
-        f"Dependency cycles detected in {repo_path} — "
-        f"{len(analysis.cycles)} cycle(s) found."
+        f"Dependency cycles detected in {repo_path} — {len(analysis.cycles)} cycle(s) found."
     )
     for index, cycle in enumerate(analysis.cycles, start=1):
         cycle_repr = " -> ".join(cycle) + f" -> {cycle[0]}"

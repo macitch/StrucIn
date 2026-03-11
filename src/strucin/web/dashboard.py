@@ -66,14 +66,11 @@ def _validate_data(data: dict[str, object]) -> None:
     """
     missing = _REQUIRED_DATA_KEYS - data.keys()
     if missing:
-        raise DashboardSchemaError(
-            f"Dashboard data missing required fields: {sorted(missing)}"
-        )
+        raise DashboardSchemaError(f"Dashboard data missing required fields: {sorted(missing)}")
     for list_key in ("files", "nodes", "edges", "cycles"):
         if not isinstance(data[list_key], list):
             raise DashboardSchemaError(
-                f"Dashboard data: '{list_key}' must be a list, "
-                f"got {type(data[list_key]).__name__}"
+                f"Dashboard data: '{list_key}' must be a list, got {type(data[list_key]).__name__}"
             )
 
 
@@ -94,9 +91,7 @@ def build_dashboard(
     _validate_data(data)  # raises before any write if schema is violated
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    (output_dir / "data.json").write_text(
-        json.dumps(data, indent=2) + "\n", encoding="utf-8"
-    )
+    (output_dir / "data.json").write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
     (output_dir / "index.html").write_text(_read_asset("index.html"), encoding="utf-8")
     (output_dir / "app.js").write_text(_read_asset("app.js"), encoding="utf-8")
     (output_dir / "styles.css").write_text(_read_asset("styles.css"), encoding="utf-8")
@@ -108,6 +103,7 @@ def serve_dashboard(
 ) -> ThreadingHTTPServer:
     if host == "0.0.0.0":  # noqa: S104
         _logger.warning("Binding to 0.0.0.0 exposes the dashboard to your entire network.")
+
     class DashboardHandler(SimpleHTTPRequestHandler):
         def __init__(
             self,

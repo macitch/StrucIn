@@ -28,6 +28,7 @@ Run only OpenAI:
 Normal CI run (skips integration tests automatically):
     pytest --cov=src/strucin --cov-fail-under=85
 """
+
 from __future__ import annotations
 
 import importlib.util
@@ -88,9 +89,7 @@ def _build_minimal_repo(root: Path) -> None:
         encoding="utf-8",
     )
     (pkg / "utils.py").write_text(
-        '"""Utility helpers."""\n\n'
-        "def clean(text: str) -> str:\n"
-        "    return text.strip().lower()\n",
+        '"""Utility helpers."""\n\ndef clean(text: str) -> str:\n    return text.strip().lower()\n',
         encoding="utf-8",
     )
     (root / "README.md").write_text(

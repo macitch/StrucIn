@@ -348,8 +348,7 @@ def search_semantic_index(index: SemanticIndex, query: str, top_k: int = 5) -> l
     query_vector = query_vectors[0]
     if len(query_vector) != index.dimensions:
         raise ValueError(
-            f"Query vector has {len(query_vector)} dimensions; "
-            f"index expects {index.dimensions}."
+            f"Query vector has {len(query_vector)} dimensions; index expects {index.dimensions}."
         )
     scored: list[tuple[int, float]] = []
     for idx, vector in enumerate(index.vectors):

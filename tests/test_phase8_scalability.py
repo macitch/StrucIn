@@ -13,14 +13,11 @@ def _seed_repo(tmp_path: Path) -> Path:
     (tmp_path / "pkg").mkdir()
     (tmp_path / "pkg" / "__init__.py").write_text("", encoding="utf-8")
     (tmp_path / "pkg" / "a.py").write_text(
-        "from . import b\n\n"
-        "def load() -> int:\n"
-        "    return b.value()\n",
+        "from . import b\n\ndef load() -> int:\n    return b.value()\n",
         encoding="utf-8",
     )
     (tmp_path / "pkg" / "b.py").write_text(
-        "def value() -> int:\n"
-        "    return 1\n",
+        "def value() -> int:\n    return 1\n",
         encoding="utf-8",
     )
     return tmp_path
@@ -35,8 +32,7 @@ def test_phase8_incremental_analysis_cache_hashes_only_changed_files(tmp_path: P
     before_cache = json.loads(cache_path.read_text(encoding="utf-8"))["files"]
 
     (repo / "pkg" / "b.py").write_text(
-        "def value() -> int:\n"
-        "    return 2\n",
+        "def value() -> int:\n    return 2\n",
         encoding="utf-8",
     )
     analyze_repository(repo, max_workers=1)

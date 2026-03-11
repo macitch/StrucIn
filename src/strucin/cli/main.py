@@ -443,9 +443,7 @@ def _run_search(path: Path, query: str, top_k: int, *, json_output: bool = False
         )
         write_semantic_index(semantic_index, index_path)
         if not json_output:
-            print(
-                f"Built semantic index with {semantic_index.chunk_count} chunks at {index_path}"
-            )
+            print(f"Built semantic index with {semantic_index.chunk_count} chunks at {index_path}")
     _record_timing(timings, "load_or_build_semantic_index", started)
 
     print_progress(2, 2, "Executing semantic query")

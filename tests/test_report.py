@@ -40,8 +40,7 @@ def test_cli_report_generates_report_md(tmp_path: Path) -> None:
     (tmp_path / "app").mkdir()
     (tmp_path / "app" / "__init__.py").write_text("", encoding="utf-8")
     (tmp_path / "app" / "service.py").write_text(
-        "def ping() -> str:\n"
-        '    return "pong"\n',
+        'def ping() -> str:\n    return "pong"\n',
         encoding="utf-8",
     )
 

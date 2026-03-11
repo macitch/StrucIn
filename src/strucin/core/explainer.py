@@ -269,8 +269,7 @@ def generate_explanation(analysis: AnalysisResult, safe_mode: bool = False) -> s
     lines.append(f"Safe mode is **{'enabled' if safe_mode else 'disabled'}**.")
     if analysis.cycles:
         lines.append(
-            f"There are **{len(analysis.cycles)} dependency cycle(s)** "
-            "that should be prioritized."
+            f"There are **{len(analysis.cycles)} dependency cycle(s)** that should be prioritized."
         )
     else:
         lines.append("No dependency cycles were detected in the current graph.")

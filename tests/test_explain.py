@@ -26,8 +26,7 @@ def test_explain_repository_generates_narration_and_cache(tmp_path: Path) -> Non
     (tmp_path / "pkg").mkdir()
     (tmp_path / "pkg" / "__init__.py").write_text("", encoding="utf-8")
     (tmp_path / "pkg" / "config.py").write_text(
-        '"""password = "super-secret-value" """\n'
-        "from . import service\n",
+        '"""password = "super-secret-value" """\nfrom . import service\n',
         encoding="utf-8",
     )
     (tmp_path / "pkg" / "service.py").write_text("from . import config\n", encoding="utf-8")
@@ -51,8 +50,7 @@ def test_explain_repository_safe_mode_hides_module_identifiers(tmp_path: Path) -
     (tmp_path / "pkg").mkdir()
     (tmp_path / "pkg" / "__init__.py").write_text("", encoding="utf-8")
     (tmp_path / "pkg" / "service.py").write_text(
-        "def run() -> int:\n"
-        "    return 1\n",
+        "def run() -> int:\n    return 1\n",
         encoding="utf-8",
     )
 
@@ -85,8 +83,7 @@ def test_cli_explain_generates_files(tmp_path: Path) -> None:
     (tmp_path / "mod").mkdir()
     (tmp_path / "mod" / "__init__.py").write_text("", encoding="utf-8")
     (tmp_path / "mod" / "core.py").write_text(
-        "def hello() -> str:\n"
-        '    return "world"\n',
+        'def hello() -> str:\n    return "world"\n',
         encoding="utf-8",
     )
 
@@ -128,8 +125,9 @@ def test_cli_explain_safe_mode_flag(tmp_path: Path) -> None:
 
 def test_detect_llm_returns_anthropic_when_key_and_package_present() -> None:
     mock_anthropic = MagicMock()
-    with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "sk-test"}, clear=True), patch.dict(
-        sys.modules, {"anthropic": mock_anthropic}
+    with (
+        patch.dict(os.environ, {"ANTHROPIC_API_KEY": "sk-test"}, clear=True),
+        patch.dict(sys.modules, {"anthropic": mock_anthropic}),
     ):
         result = _detect_llm(LLMConfig())
     assert result == ("anthropic", "claude-haiku-4-5-20251001")
@@ -137,8 +135,9 @@ def test_detect_llm_returns_anthropic_when_key_and_package_present() -> None:
 
 def test_detect_llm_returns_openai_when_only_openai_key_present() -> None:
     mock_openai = MagicMock()
-    with patch.dict(os.environ, {"OPENAI_API_KEY": "sk-openai-test"}, clear=True), patch.dict(
-        sys.modules, {"openai": mock_openai}
+    with (
+        patch.dict(os.environ, {"OPENAI_API_KEY": "sk-openai-test"}, clear=True),
+        patch.dict(sys.modules, {"openai": mock_openai}),
     ):
         result = _detect_llm(LLMConfig())
     assert result == ("openai", "gpt-4o-mini")
@@ -211,8 +210,9 @@ def test_call_llm_returns_none_on_exception() -> None:
 def test_explain_repository_uses_llm_when_available(tmp_path: Path) -> None:
     (tmp_path / "mod.py").write_text("def foo(): pass\n", encoding="utf-8")
 
-    with patch("strucin.core.explainer._detect_llm", return_value=("anthropic", "m")), patch(
-        "strucin.core.explainer._call_llm", return_value="# LLM Output"
+    with (
+        patch("strucin.core.explainer._detect_llm", return_value=("anthropic", "m")),
+        patch("strucin.core.explainer._call_llm", return_value="# LLM Output"),
     ):
         output = explain_repository(tmp_path, llm_config=LLMConfig())
 
@@ -223,8 +223,9 @@ def test_explain_repository_uses_llm_when_available(tmp_path: Path) -> None:
 def test_explain_repository_falls_back_to_template_when_llm_fails(tmp_path: Path) -> None:
     (tmp_path / "mod.py").write_text("def foo(): pass\n", encoding="utf-8")
 
-    with patch("strucin.core.explainer._detect_llm", return_value=("anthropic", "m")), patch(
-        "strucin.core.explainer._call_llm", return_value=None
+    with (
+        patch("strucin.core.explainer._detect_llm", return_value=("anthropic", "m")),
+        patch("strucin.core.explainer._call_llm", return_value=None),
     ):
         output = explain_repository(tmp_path, llm_config=LLMConfig(), refresh=True)
 
@@ -269,9 +270,7 @@ def test_explain_repository_ignores_stale_cache_version(tmp_path: Path) -> None:
 
 def test_redact_analysis_uses_dataclasses_replace(tmp_path: Path) -> None:
     """redact_analysis must preserve all non-docstring fields via dataclasses.replace."""
-    (tmp_path / "mod.py").write_text(
-        '"""password = "super-secret"\n"""\nx = 1\n', encoding="utf-8"
-    )
+    (tmp_path / "mod.py").write_text('"""password = "super-secret"\n"""\nx = 1\n', encoding="utf-8")
     from strucin.core.analyzer import analyze_repository
 
     analysis = analyze_repository(tmp_path)

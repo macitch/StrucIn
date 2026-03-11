@@ -32,9 +32,7 @@ __all__ = [
     "render_diff_markdown",
 ]
 
-_REQUIRED_KEYS: frozenset[str] = frozenset(
-    {"generated_at", "files", "cycles"}
-)
+_REQUIRED_KEYS: frozenset[str] = frozenset({"generated_at", "files", "cycles"})
 
 _COUPLING_DELTA_THRESHOLD = 2
 
@@ -137,9 +135,7 @@ def load_analysis_json(path: Path) -> dict[str, object]:
 
     missing = _REQUIRED_KEYS - payload.keys()
     if missing:
-        raise AnalysisError(
-            f"analysis file {path} is missing required keys: {sorted(missing)}"
-        )
+        raise AnalysisError(f"analysis file {path} is missing required keys: {sorted(missing)}")
 
     return payload
 
@@ -350,8 +346,7 @@ def _md_complexity_section(lines: list[str], changes: list[ComplexityDelta]) -> 
     if changes:
         for change in changes:
             lines.append(
-                f"- `{change.module_path}`: {change.before} -> {change.after} "
-                f"({change.delta:+d})"
+                f"- `{change.module_path}`: {change.before} -> {change.after} ({change.delta:+d})"
             )
     else:
         lines.append("- None")
@@ -381,8 +376,7 @@ def _md_loc_section(lines: list[str], changes: list[LocDelta]) -> None:
     if changes:
         for change in changes:
             lines.append(
-                f"- `{change.module_path}`: {change.before} -> {change.after} "
-                f"({change.delta:+d})"
+                f"- `{change.module_path}`: {change.before} -> {change.after} ({change.delta:+d})"
             )
     else:
         lines.append("- None")

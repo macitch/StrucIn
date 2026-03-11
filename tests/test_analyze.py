@@ -58,9 +58,7 @@ def test_cli_analyze_generates_analysis_and_graph_json(tmp_path: Path) -> None:
     (tmp_path / "sample").mkdir()
     (tmp_path / "sample" / "__init__.py").write_text("", encoding="utf-8")
     (tmp_path / "sample" / "core.py").write_text(
-        "from . import __init__\n\n"
-        "def ok() -> bool:\n"
-        "    return True\n",
+        "from . import __init__\n\ndef ok() -> bool:\n    return True\n",
         encoding="utf-8",
     )
 

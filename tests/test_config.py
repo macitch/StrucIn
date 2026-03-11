@@ -55,9 +55,7 @@ def test_load_config_reads_performance_workers(tmp_path: Path) -> None:
 
 def test_load_config_parses_llm_table(tmp_path: Path) -> None:
     (tmp_path / ".strucin.toml").write_text(
-        "[llm]\n"
-        'anthropic_model = "claude-opus-4-6"\n'
-        'openai_model = "gpt-4o"\n',
+        '[llm]\nanthropic_model = "claude-opus-4-6"\nopenai_model = "gpt-4o"\n',
         encoding="utf-8",
     )
     config = load_config(tmp_path)
@@ -107,10 +105,7 @@ def test_default_config_has_report_defaults() -> None:
 
 def test_load_config_parses_report_table(tmp_path: Path) -> None:
     (tmp_path / ".strucin.toml").write_text(
-        "[report]\n"
-        "fan_out_threshold = 3\n"
-        "complexity_threshold = 10\n"
-        "loc_threshold = 200\n",
+        "[report]\nfan_out_threshold = 3\ncomplexity_threshold = 10\nloc_threshold = 200\n",
         encoding="utf-8",
     )
     config = load_config(tmp_path)
@@ -193,7 +188,7 @@ def test_default_config_executor_is_auto() -> None:
 
 def test_load_config_parses_executor(tmp_path: Path) -> None:
     (tmp_path / ".strucin.toml").write_text(
-        "[performance]\nexecutor = \"process\"\n", encoding="utf-8"
+        '[performance]\nexecutor = "process"\n', encoding="utf-8"
     )
     config = load_config(tmp_path)
     assert config.performance.executor == "process"
@@ -203,7 +198,7 @@ def test_load_config_executor_invalid_falls_back(
     tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
     (tmp_path / ".strucin.toml").write_text(
-        "[performance]\nexecutor = \"foobar\"\n", encoding="utf-8"
+        '[performance]\nexecutor = "foobar"\n', encoding="utf-8"
     )
     with caplog.at_level(logging.WARNING, logger="strucin.core.config"):
         config = load_config(tmp_path)
@@ -239,9 +234,7 @@ def test_as_executor_type_none_returns_fallback_silently(
 
 def test_load_config_bool_max_workers_falls_back(tmp_path: Path) -> None:
     """max_workers = true is a bool in TOML; must fall back to default, not become 1."""
-    (tmp_path / ".strucin.toml").write_text(
-        "[performance]\nmax_workers = true\n", encoding="utf-8"
-    )
+    (tmp_path / ".strucin.toml").write_text("[performance]\nmax_workers = true\n", encoding="utf-8")
     config = load_config(tmp_path)
     assert config.performance.max_workers > 1  # default, not bool-cast-to-int
 
@@ -249,8 +242,6 @@ def test_load_config_bool_max_workers_falls_back(tmp_path: Path) -> None:
 def test_load_config_table_as_string_falls_back(tmp_path: Path) -> None:
     """[performance] = 'string' must not crash; table falls back to empty dict."""
     # TOML won't allow [performance] = "string" syntax, so test via search table
-    (tmp_path / ".strucin.toml").write_text(
-        "search = \"not_a_table\"\n", encoding="utf-8"
-    )
+    (tmp_path / ".strucin.toml").write_text('search = "not_a_table"\n', encoding="utf-8")
     config = load_config(tmp_path)
     assert config.search.top_k == 5  # default preserved

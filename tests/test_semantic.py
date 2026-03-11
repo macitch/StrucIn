@@ -28,8 +28,7 @@ def test_build_semantic_index_and_search(tmp_path: Path) -> None:
         encoding="utf-8",
     )
     (tmp_path / "README.md").write_text(
-        "# Billing service\n"
-        "Retry failed payment flow handles transient gateway outage.\n",
+        "# Billing service\nRetry failed payment flow handles transient gateway outage.\n",
         encoding="utf-8",
     )
 
@@ -50,8 +49,7 @@ def test_cli_search_builds_index_and_prints_hits(tmp_path: Path) -> None:
     (tmp_path / "pkg").mkdir()
     (tmp_path / "pkg" / "__init__.py").write_text("", encoding="utf-8")
     (tmp_path / "pkg" / "utils.py").write_text(
-        "def normalize_token(token: str) -> str:\n"
-        "    return token.strip().lower()\n",
+        "def normalize_token(token: str) -> str:\n    return token.strip().lower()\n",
         encoding="utf-8",
     )
 
@@ -110,8 +108,9 @@ def test_load_sentence_transformer_loads_and_caches_model() -> None:
     mock_model = MagicMock()
     mock_st_module.SentenceTransformer.return_value = mock_model
 
-    with patch.dict(sys.modules, {"sentence_transformers": mock_st_module}), patch.dict(
-        _ST_MODEL_CACHE, {}, clear=True
+    with (
+        patch.dict(sys.modules, {"sentence_transformers": mock_st_module}),
+        patch.dict(_ST_MODEL_CACHE, {}, clear=True),
     ):
         result = _load_sentence_transformer("new-model-xyz")
         assert "new-model-xyz" in _ST_MODEL_CACHE
@@ -121,8 +120,11 @@ def test_load_sentence_transformer_loads_and_caches_model() -> None:
 
 
 def test_load_sentence_transformer_returns_none_on_import_error() -> None:
-    with patch.dict(sys.modules, {"sentence_transformers": None}), patch.dict(  # type: ignore[dict-item]
-        _ST_MODEL_CACHE, {}, clear=True
+    with (
+        patch.dict(sys.modules, {"sentence_transformers": None}),
+        patch.dict(  # type: ignore[dict-item]
+            _ST_MODEL_CACHE, {}, clear=True
+        ),
     ):
         result = _load_sentence_transformer("some-model")
     assert result is None
