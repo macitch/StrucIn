@@ -1,0 +1,221 @@
+{
+  "artifact_metadata": {
+    "artifact_type": "dependency_graph",
+    "generated_at": "2026-03-11T13:54:20.370817+00:00",
+    "schema_version": "1.0",
+    "strucin_version": "0.1.0"
+  },
+  "nodes": [
+    "strucin",
+    "strucin._version",
+    "strucin.cli",
+    "strucin.cli.__main__",
+    "strucin.cli.main",
+    "strucin.cli.ui",
+    "strucin.core",
+    "strucin.core.analysis_cache",
+    "strucin.core.analyzer",
+    "strucin.core.artifacts",
+    "strucin.core.config",
+    "strucin.core.diff",
+    "strucin.core.explainer",
+    "strucin.core.import_resolver",
+    "strucin.core.indexer",
+    "strucin.core.lifecycle",
+    "strucin.core.metrics",
+    "strucin.core.models",
+    "strucin.core.reporter",
+    "strucin.core.semantic",
+    "strucin.exceptions",
+    "strucin.utils",
+    "strucin.utils.logging",
+    "strucin.web",
+    "strucin.web.dashboard"
+  ],
+  "edges": [
+    {
+      "source": "strucin",
+      "target": "strucin._version"
+    },
+    {
+      "source": "strucin",
+      "target": "strucin.core.analyzer"
+    },
+    {
+      "source": "strucin",
+      "target": "strucin.core.config"
+    },
+    {
+      "source": "strucin",
+      "target": "strucin.core.explainer"
+    },
+    {
+      "source": "strucin",
+      "target": "strucin.core.semantic"
+    },
+    {
+      "source": "strucin",
+      "target": "strucin.exceptions"
+    },
+    {
+      "source": "strucin.cli.__main__",
+      "target": "strucin.cli.main"
+    },
+    {
+      "source": "strucin.cli.main",
+      "target": "strucin._version"
+    },
+    {
+      "source": "strucin.cli.main",
+      "target": "strucin.cli.ui"
+    },
+    {
+      "source": "strucin.cli.main",
+      "target": "strucin.core.analyzer"
+    },
+    {
+      "source": "strucin.cli.main",
+      "target": "strucin.core.config"
+    },
+    {
+      "source": "strucin.cli.main",
+      "target": "strucin.core.diff"
+    },
+    {
+      "source": "strucin.cli.main",
+      "target": "strucin.core.explainer"
+    },
+    {
+      "source": "strucin.cli.main",
+      "target": "strucin.core.indexer"
+    },
+    {
+      "source": "strucin.cli.main",
+      "target": "strucin.core.lifecycle"
+    },
+    {
+      "source": "strucin.cli.main",
+      "target": "strucin.core.reporter"
+    },
+    {
+      "source": "strucin.cli.main",
+      "target": "strucin.core.semantic"
+    },
+    {
+      "source": "strucin.cli.main",
+      "target": "strucin.utils.logging"
+    },
+    {
+      "source": "strucin.cli.main",
+      "target": "strucin.web.dashboard"
+    },
+    {
+      "source": "strucin.core.analysis_cache",
+      "target": "strucin.core.artifacts"
+    },
+    {
+      "source": "strucin.core.analysis_cache",
+      "target": "strucin.core.models"
+    },
+    {
+      "source": "strucin.core.analyzer",
+      "target": "strucin.core.analysis_cache"
+    },
+    {
+      "source": "strucin.core.analyzer",
+      "target": "strucin.core.artifacts"
+    },
+    {
+      "source": "strucin.core.analyzer",
+      "target": "strucin.core.import_resolver"
+    },
+    {
+      "source": "strucin.core.analyzer",
+      "target": "strucin.core.indexer"
+    },
+    {
+      "source": "strucin.core.analyzer",
+      "target": "strucin.core.metrics"
+    },
+    {
+      "source": "strucin.core.analyzer",
+      "target": "strucin.core.models"
+    },
+    {
+      "source": "strucin.core.artifacts",
+      "target": "strucin._version"
+    },
+    {
+      "source": "strucin.core.config",
+      "target": "strucin.core.indexer"
+    },
+    {
+      "source": "strucin.core.diff",
+      "target": "strucin.exceptions"
+    },
+    {
+      "source": "strucin.core.explainer",
+      "target": "strucin.core.analyzer"
+    },
+    {
+      "source": "strucin.core.explainer",
+      "target": "strucin.core.artifacts"
+    },
+    {
+      "source": "strucin.core.explainer",
+      "target": "strucin.core.config"
+    },
+    {
+      "source": "strucin.core.import_resolver",
+      "target": "strucin.core.indexer"
+    },
+    {
+      "source": "strucin.core.import_resolver",
+      "target": "strucin.core.models"
+    },
+    {
+      "source": "strucin.core.indexer",
+      "target": "strucin.core.artifacts"
+    },
+    {
+      "source": "strucin.core.metrics",
+      "target": "strucin.core.models"
+    },
+    {
+      "source": "strucin.core.reporter",
+      "target": "strucin"
+    },
+    {
+      "source": "strucin.core.reporter",
+      "target": "strucin.core.analyzer"
+    },
+    {
+      "source": "strucin.core.reporter",
+      "target": "strucin.core.config"
+    },
+    {
+      "source": "strucin.core.reporter",
+      "target": "strucin.core.explainer"
+    },
+    {
+      "source": "strucin.core.semantic",
+      "target": "strucin.core.artifacts"
+    },
+    {
+      "source": "strucin.core.semantic",
+      "target": "strucin.core.indexer"
+    },
+    {
+      "source": "strucin.web.dashboard",
+      "target": "strucin.core.analyzer"
+    },
+    {
+      "source": "strucin.web.dashboard",
+      "target": "strucin.core.artifacts"
+    },
+    {
+      "source": "strucin.web.dashboard",
+      "target": "strucin.exceptions"
+    }
+  ]
+}

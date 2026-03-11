@@ -1,0 +1,123 @@
+:root {
+  --bg: #f7f8fb;
+  --panel: #ffffff;
+  --ink: #14213d;
+  --muted: #546179;
+  --accent: #ff7f11;
+  --line: #d4dbe7;
+  --selected: #0d6efd;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  background: radial-gradient(circle at 20% 0%, #ffffff 0%, var(--bg) 48%);
+  color: var(--ink);
+}
+
+.topbar {
+  padding: 24px 28px 14px;
+}
+
+.topbar h1 {
+  margin: 0 0 6px;
+  font-size: 28px;
+}
+
+.topbar p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+  gap: 16px;
+  padding: 0 22px 22px;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(20, 33, 61, 0.06);
+  padding: 16px;
+}
+
+.panel-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+#nodeFilter {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  min-width: 230px;
+}
+
+#graph {
+  width: 100%;
+  height: min(68vh, 680px);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fdfefe;
+}
+
+#moduleList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 300px;
+  overflow: auto;
+}
+
+#moduleList li {
+  padding: 7px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+#moduleList li:hover {
+  background: #eff3fb;
+}
+
+#moduleList li.active {
+  background: #e4efff;
+  color: #002e6d;
+}
+
+.graph-node {
+  fill: var(--accent);
+  stroke: #fff;
+  stroke-width: 1.25px;
+  cursor: pointer;
+}
+
+.graph-node.active {
+  fill: var(--selected);
+}
+
+.graph-edge {
+  stroke: #9aa8c4;
+  stroke-opacity: 0.45;
+  stroke-width: 1;
+}
+
+.graph-edge.active {
+  stroke: var(--selected);
+  stroke-opacity: 1;
+  stroke-width: 1.8;
+}
+
+@media (max-width: 980px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}

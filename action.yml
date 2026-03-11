@@ -1,0 +1,270 @@
+name: "StrucIn Architecture Analysis"
+description: "Run structural analysis on your Python repository and post results as a PR comment"
+
+inputs:
+  path:
+    description: "Path to the Python repository to analyze"
+    required: false
+    default: "."
+  command:
+    description: "StrucIn command to run: scan, analyze, or report"
+    required: false
+    default: "report"
+  python-version:
+    description: "Python version to use when running StrucIn"
+    required: false
+    default: "3.12"
+  post-comment:
+    description: "Post REPORT.md content as a PR comment (true or false)"
+    required: false
+    default: "true"
+  safe-mode:
+    description: "Run StrucIn with --safe-mode flag to suppress non-critical errors"
+    required: false
+    default: "false"
+  fail-on-cycles:
+    description: "Fail the action if dependency cycles are detected in analysis.json"
+    required: false
+    default: "false"
+
+outputs:
+  report-path:
+    description: "Absolute path to the generated REPORT.md file"
+    value: ${{ steps.resolve-paths.outputs.report-path }}
+  cycles-found:
+    description: "Whether dependency cycles were detected: 'true' or 'false'"
+    value: ${{ steps.check-cycles.outputs.cycles-found }}
+
+runs:
+  using: "composite"
+  steps:
+
+    # -------------------------------------------------------------------------
+    # 1. Set up the requested Python version
+    # -------------------------------------------------------------------------
+    - name: Set up Python ${{ inputs.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    # -------------------------------------------------------------------------
+    # 2. Install StrucIn from PyPI
+    # -------------------------------------------------------------------------
+    - name: Install StrucIn
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip
+        pip install strucin
+
+    # -------------------------------------------------------------------------
+    # 3. Resolve absolute paths for outputs before the run so later steps can
+    #    reference them regardless of working-directory changes.
+    # -------------------------------------------------------------------------
+    - name: Resolve output paths
+      id: resolve-paths
+      shell: bash
+      run: |
+        TARGET_PATH="${{ inputs.path }}"
+
+        # Normalise: if path is '.', expand to the actual working directory so
+        # the output value is always an absolute path the caller can use.
+        if [ "$TARGET_PATH" = "." ]; then
+          TARGET_PATH="$(pwd)"
+        else
+          TARGET_PATH="$(realpath "$TARGET_PATH")"
+        fi
+
+        REPORT_PATH="${TARGET_PATH}/REPORT.md"
+        ANALYSIS_PATH="${TARGET_PATH}/analysis.json"
+
+        echo "target-path=${TARGET_PATH}"    >> "$GITHUB_OUTPUT"
+        echo "report-path=${REPORT_PATH}"    >> "$GITHUB_OUTPUT"
+        echo "analysis-path=${ANALYSIS_PATH}" >> "$GITHUB_OUTPUT"
+
+    # -------------------------------------------------------------------------
+    # 4. Run the requested StrucIn command
+    #
+    #    Command semantics (from the CLI):
+    #      scan    → writes repo_index.json
+    #      analyze → writes analysis.json + dependency_graph.json
+    #      report  → runs scan + analyze then writes REPORT.md
+    #
+    #    When the command is 'scan' or 'analyze' we still need analysis.json
+    #    for the cycle-detection step, so we promote automatically when
+    #    fail-on-cycles is true.
+    # -------------------------------------------------------------------------
+    - name: Run strucin ${{ inputs.command }}
+      id: run-strucin
+      shell: bash
+      run: |
+        CMD="${{ inputs.command }}"
+        TARGET="${{ steps.resolve-paths.outputs.target-path }}"
+        SAFE_FLAG=""
+
+        if [ "${{ inputs.safe-mode }}" = "true" ]; then
+          SAFE_FLAG="--safe-mode"
+        fi
+
+        echo "Running: strucin ${CMD} ${TARGET} ${SAFE_FLAG}"
+        strucin "${CMD}" "${TARGET}" ${SAFE_FLAG}
+
+        # If fail-on-cycles is requested but the command was 'scan' (which does
+        # not produce analysis.json), escalate to 'analyze' so the artifact is
+        # available for the cycle check.
+        if [ "${{ inputs.fail-on-cycles }}" = "true" ] && [ "${CMD}" = "scan" ]; then
+          echo "fail-on-cycles is true and command was 'scan'; running 'analyze' to produce analysis.json"
+          strucin analyze "${TARGET}" ${SAFE_FLAG}
+        fi
+
+    # -------------------------------------------------------------------------
+    # 5. Check analysis.json for dependency cycles
+    #
+    #    StrucIn stores cycles under analysis.json -> "cycles" (list).
+    #    This step always runs so the output is always set; the failure is
+    #    conditional on the fail-on-cycles input.
+    # -------------------------------------------------------------------------
+    - name: Check for dependency cycles
+      id: check-cycles
+      shell: bash
+      run: |
+        ANALYSIS_FILE="${{ steps.resolve-paths.outputs.analysis-path }}"
+        CYCLES_FOUND="false"
+
+        if [ -f "${ANALYSIS_FILE}" ]; then
+          # Use Python to parse JSON safely. jq may not be available on all runners.
+          CYCLE_COUNT=$(python3 - <<'EOF'
+        import json, sys
+
+        path = "${{ steps.resolve-paths.outputs.analysis-path }}"
+        try:
+            with open(path) as f:
+                data = json.load(f)
+            cycles = data.get("cycles", [])
+            print(len(cycles))
+        except Exception as e:
+            print(0, file=sys.stderr)
+            print(0)
+        EOF
+          )
+
+          if [ "${CYCLE_COUNT}" -gt "0" ]; then
+            CYCLES_FOUND="true"
+            echo "::warning::StrucIn detected ${CYCLE_COUNT} dependency cycle(s) in ${ANALYSIS_FILE}"
+          else
+            echo "No dependency cycles detected."
+          fi
+        else
+          echo "analysis.json not found at ${ANALYSIS_FILE}; skipping cycle check."
+        fi
+
+        echo "cycles-found=${CYCLES_FOUND}" >> "$GITHUB_OUTPUT"
+
+    # -------------------------------------------------------------------------
+    # 6. Fail the job if cycles were found and fail-on-cycles is true
+    # -------------------------------------------------------------------------
+    - name: Fail on dependency cycles
+      if: inputs.fail-on-cycles == 'true' && steps.check-cycles.outputs.cycles-found == 'true'
+      shell: bash
+      run: |
+        echo "::error::Dependency cycles detected. Set fail-on-cycles: 'false' to allow cycles without failing."
+        exit 1
+
+    # -------------------------------------------------------------------------
+    # 7. Post REPORT.md as a PR comment
+    #
+    #    Only runs when:
+    #      - post-comment is 'true'
+    #      - the event is a pull_request (github.event_name check in the script)
+    #      - REPORT.md actually exists (report command was used, or report was
+    #        produced by a previous step in the caller's workflow)
+    # -------------------------------------------------------------------------
+    - name: Post analysis report as PR comment
+      if: >
+        inputs.post-comment == 'true' &&
+        github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs   = require('fs');
+          const path = require('path');
+
+          const reportPath = '${{ steps.resolve-paths.outputs.report-path }}';
+
+          if (!fs.existsSync(reportPath)) {
+            core.warning(
+              `REPORT.md not found at ${reportPath}. ` +
+              `Use command: 'report' to generate it, or run 'strucin report' before this action.`
+            );
+            return;
+          }
+
+          const reportContent = fs.readFileSync(reportPath, 'utf8');
+
+          // GitHub comment body cap is 65536 characters. Truncate with a notice
+          // if the report exceeds that limit.
+          const MAX_CHARS  = 65000;
+          const MARKER     = '<!-- strucin-report -->';
+          const cyclesFlag = '${{ steps.check-cycles.outputs.cycles-found }}' === 'true'
+            ? '\n> **Dependency cycles detected.** Review `analysis.json` for details.\n'
+            : '';
+
+          let body = reportContent;
+          if (body.length > MAX_CHARS) {
+            body = body.slice(0, MAX_CHARS) +
+              '\n\n---\n_Report truncated — full output available in the `REPORT.md` artifact._';
+          }
+
+          const commentBody = [
+            MARKER,
+            '## StrucIn Architecture Analysis',
+            cyclesFlag,
+            '<details>',
+            '<summary>View full report</summary>',
+            '',
+            body,
+            '',
+            '</details>',
+            '',
+            `_Generated by [StrucIn](https://github.com/macitch/StrucIn) on \`${{ github.sha }}\`_`,
+          ].join('\n');
+
+          const { data: comments } = await github.rest.issues.listComments({
+            owner:      context.repo.owner,
+            repo:       context.repo.repo,
+            issue_number: context.issue.number,
+          });
+
+          // Update existing comment if one was posted by a previous run,
+          // otherwise create a new one.
+          const existing = comments.find(c => c.body && c.body.includes(MARKER));
+
+          if (existing) {
+            await github.rest.issues.updateComment({
+              owner:      context.repo.owner,
+              repo:       context.repo.repo,
+              comment_id: existing.id,
+              body:       commentBody,
+            });
+            core.info(`Updated existing StrucIn comment (id: ${existing.id})`);
+          } else {
+            await github.rest.issues.createComment({
+              owner:        context.repo.owner,
+              repo:         context.repo.repo,
+              issue_number: context.issue.number,
+              body:         commentBody,
+            });
+            core.info('Created new StrucIn PR comment.');
+          }
+
+    # -------------------------------------------------------------------------
+    # 8. Upload REPORT.md as a workflow artifact so it is always retrievable
+    #    regardless of whether this is a PR or a push to a branch.
+    # -------------------------------------------------------------------------
+    - name: Upload REPORT.md artifact
+      if: hashFiles(steps.resolve-paths.outputs.report-path) != ''
+      uses: actions/upload-artifact@v4
+      with:
+        name: strucin-report
+        path: ${{ steps.resolve-paths.outputs.report-path }}
+        if-no-files-found: ignore
+        retention-days: 30

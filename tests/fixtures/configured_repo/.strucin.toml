@@ -1,0 +1,18 @@
+[scan]
+exclude_dirs = [".git", "__pycache__", "node_modules", "venv", ".venv", "vendor"]
+
+[search]
+top_k = 2
+dimensions = 128
+
+[performance]
+max_workers = 1
+
+[output]
+repo_index = "custom_index.json"
+analysis = "custom_analysis.json"
+dependency_graph = "custom_dependency_graph.json"
+report = "CUSTOM_REPORT.md"
+semantic_index = "custom_semantic_index.json"
+explain_markdown = "CUSTOM_EXPLAIN.md"
+explain_metadata = "custom_explain.json"

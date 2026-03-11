@@ -1,0 +1,107 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "strucin"
+dynamic = ["version"]
+description = "Structural intelligence for Python repositories"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "macitch", email = "contact@macitch.dev" }]
+license = {text = "MIT"}
+keywords = ["architecture", "static-analysis", "dependency-graph", "codebase", "llm"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: Quality Assurance",
+]
+dependencies = ["rich>=13.0"]
+
+[project.urls]
+Homepage = "https://github.com/macitch/StrucIn"
+Repository = "https://github.com/macitch/StrucIn"
+"Bug Tracker" = "https://github.com/macitch/StrucIn/issues"
+
+[project.optional-dependencies]
+embeddings = ["sentence-transformers>=2.7.0"]
+llm = ["anthropic>=0.40.0", "openai>=1.0.0"]
+ai = ["sentence-transformers>=2.7.0", "anthropic>=0.40.0", "openai>=1.0.0"]
+dev = ["pytest>=7.4", "pytest-cov>=4.1", "ruff>=0.4", "mypy>=1.9"]
+
+[project.scripts]
+strucin = "strucin.cli.main:main"
+strucin-check-cycles = "strucin.cli.hooks:main_cycles"
+strucin-check-complexity = "strucin.cli.hooks:main_complexity"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.dynamic]
+version = {attr = "strucin._version.__version__"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["strucin*"]
+
+[tool.setuptools.package-data]
+"strucin" = ["py.typed"]
+"strucin.web" = ["assets/*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["tests/fixtures"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "S", "C90", "SIM", "T20", "PERF", "RET", "PTH"]
+ignore = [
+    "SIM108",  # ternary operator — sometimes less readable than if/else
+    "RET504",  # unnecessary assignment before return — sometimes adds clarity
+    "PERF401", # manual list comprehension — intentional in several places
+    "S603",    # subprocess without shell=True — handled per-file in tests
+    "S607",    # partial executable path — handled per-file in tests
+]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 12
+
+[tool.ruff.lint.per-file-ignores]
+"src/strucin/cli/main.py" = ["T201"]
+"src/strucin/cli/ui.py" = ["T201"]
+"src/strucin/cli/hooks.py" = ["T201"]
+"src/strucin/utils/logging.py" = ["T201"]
+"tests/*.py" = ["S101", "S603", "S607", "S105", "S106", "T201"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+module = ["anthropic", "openai", "sentence_transformers"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+markers = [
+    "integration: real API calls — requires env vars and pip install strucin[llm]",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["src/strucin"]
+omit = ["src/strucin/cli/main.py", "src/strucin/cli/__main__.py"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+]

@@ -1,0 +1,2902 @@
+{
+  "artifact_metadata": {
+    "artifact_type": "analysis",
+    "generated_at": "2026-03-11T13:54:20.370817+00:00",
+    "schema_version": "1.0",
+    "strucin_version": "0.1.0"
+  },
+  "repo_root": "/path/to/strucin/src",
+  "generated_at": "2026-03-11T13:54:20.370817+00:00",
+  "file_count": 25,
+  "module_count": 25,
+  "files": [
+    {
+      "path": "strucin/__init__.py",
+      "module_path": "strucin",
+      "loc": 49,
+      "size_bytes": 1309,
+      "docstring": "StrucIn \u2014 Structural Intelligence for Python codebases.\n\nPrimary public API::\n\n    from strucin import analyze_repository, AnalysisResult\n    from strucin import explain_repository\n    from strucin import build_semantic_index, search_semantic_index\n    from strucin import load_config, StrucInConfig\n    from strucin import StrucInError",
+      "imports": [
+        {
+          "kind": "from",
+          "module": "__future__",
+          "level": 0,
+          "names": [
+            "annotations"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin._version",
+          "level": 0,
+          "names": [
+            "__version__"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.core.analyzer",
+          "level": 0,
+          "names": [
+            "AnalysisResult",
+            "FileAnalysis",
+            "analyze_repository"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.core.config",
+          "level": 0,
+          "names": [
+            "StrucInConfig",
+            "load_config"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.core.explainer",
+          "level": 0,
+          "names": [
+            "ExplainOutput",
+            "explain_repository"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.core.semantic",
+          "level": 0,
+          "names": [
+            "SemanticHit",
+            "build_semantic_index",
+            "search_semantic_index"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.exceptions",
+          "level": 0,
+          "names": [
+            "AnalysisError",
+            "CacheError",
+            "ConfigError",
+            "DashboardSchemaError",
+            "StrucInError"
+          ]
+        }
+      ],
+      "classes": [],
+      "functions": [],
+      "cyclomatic_complexity": 1,
+      "fan_in": 1,
+      "fan_out": 6
+    },
+    {
+      "path": "strucin/_version.py",
+      "module_path": "strucin._version",
+      "loc": 8,
+      "size_bytes": 278,
+      "docstring": "Single source of truth for the package version.\n\nBoth ``strucin.__init__`` and ``strucin.core.artifacts`` import from here to\navoid a circular-import cycle that would arise if ``artifacts`` imported\ndirectly from the top-level ``strucin`` package.",
+      "imports": [],
+      "classes": [],
+      "functions": [],
+      "cyclomatic_complexity": 1,
+      "fan_in": 3,
+      "fan_out": 0
+    },
+    {
+      "path": "strucin/cli/__init__.py",
+      "module_path": "strucin.cli",
+      "loc": 3,
+      "size_bytes": 51,
+      "docstring": "CLI package for StrucIn.",
+      "imports": [],
+      "classes": [],
+      "functions": [],
+      "cyclomatic_complexity": 1,
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    {
+      "path": "strucin/cli/__main__.py",
+      "module_path": "strucin.cli.__main__",
+      "loc": 4,
+      "size_bytes": 80,
+      "docstring": null,
+      "imports": [
+        {
+          "kind": "from",
+          "module": "main",
+          "level": 1,
+          "names": [
+            "main"
+          ]
+        }
+      ],
+      "classes": [],
+      "functions": [],
+      "cyclomatic_complexity": 2,
+      "fan_in": 0,
+      "fan_out": 1
+    },
+    {
+      "path": "strucin/cli/main.py",
+      "module_path": "strucin.cli.main",
+      "loc": 679,
+      "size_bytes": 23610,
+      "docstring": null,
+      "imports": [
+        {
+          "kind": "from",
+          "module": "__future__",
+          "level": 0,
+          "names": [
+            "annotations"
+          ]
+        },
+        {
+          "kind": "import",
+          "module": null,
+          "level": 0,
+          "names": [
+            "argparse"
+          ]
+        },
+        {
+          "kind": "import",
+          "module": null,
+          "level": 0,
+          "names": [
+            "json"
+          ]
+        },
+        {
+          "kind": "import",
+          "module": null,
+          "level": 0,
+          "names": [
+            "logging"
+          ]
+        },
+        {
+          "kind": "import",
+          "module": null,
+          "level": 0,
+          "names": [
+            "traceback"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "pathlib",
+          "level": 0,
+          "names": [
+            "Path"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "time",
+          "level": 0,
+          "names": [
+            "perf_counter"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin._version",
+          "level": 0,
+          "names": [
+            "__version__"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.cli.ui",
+          "level": 0,
+          "names": [
+            "format_table",
+            "print_error",
+            "print_progress",
+            "print_success"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.core.analyzer",
+          "level": 0,
+          "names": [
+            "analyze_repository",
+            "write_analysis"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.core.config",
+          "level": 0,
+          "names": [
+            "StrucInConfig",
+            "load_config"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.core.explainer",
+          "level": 0,
+          "names": [
+            "explain_repository",
+            "write_explain_metadata",
+            "write_explanation"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.core.indexer",
+          "level": 0,
+          "names": [
+            "scan_repository",
+            "write_repo_index"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.core.lifecycle",
+          "level": 0,
+          "names": [
+            "cleanup_stale_artifacts"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.core.reporter",
+          "level": 0,
+          "names": [
+            "write_markdown_report"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.core.semantic",
+          "level": 0,
+          "names": [
+            "build_semantic_index",
+            "load_semantic_index",
+            "search_semantic_index",
+            "write_semantic_index"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.utils.logging",
+          "level": 0,
+          "names": [
+            "CommandTiming",
+            "emit_structured_log"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.web.dashboard",
+          "level": 0,
+          "names": [
+            "build_dashboard",
+            "serve_dashboard"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.core.diff",
+          "level": 0,
+          "names": [
+            "diff_analyses",
+            "render_diff_json",
+            "render_diff_markdown"
+          ]
+        }
+      ],
+      "classes": [],
+      "functions": [
+        {
+          "name": "build_parser",
+          "lineno": 74,
+          "docstring": null,
+          "cyclomatic_complexity": 1
+        },
+        {
+          "name": "main",
+          "lineno": 194,
+          "docstring": null,
+          "cyclomatic_complexity": 13
+        },
+        {
+          "name": "_validate_repo_path",
+          "lineno": 232,
+          "docstring": null,
+          "cyclomatic_complexity": 3
+        },
+        {
+          "name": "_resolve_config",
+          "lineno": 242,
+          "docstring": null,
+          "cyclomatic_complexity": 1
+        },
+        {
+          "name": "_run_init",
+          "lineno": 251,
+          "docstring": null,
+          "cyclomatic_complexity": 2
+        },
+        {
+          "name": "_run_scan",
+          "lineno": 267,
+          "docstring": null,
+          "cyclomatic_complexity": 3
+        },
+        {
+          "name": "_run_analyze",
+          "lineno": 321,
+          "docstring": null,
+          "cyclomatic_complexity": 3
+        },
+        {
+          "name": "_run_report",
+          "lineno": 382,
+          "docstring": null,
+          "cyclomatic_complexity": 2
+        },
+        {
+          "name": "_run_search",
+          "lineno": 416,
+          "docstring": null,
+          "cyclomatic_complexity": 8
+        },
+        {
+          "name": "_run_explain",
+          "lineno": 504,
+          "docstring": null,
+          "cyclomatic_complexity": 2
+        },
+        {
+          "name": "_run_diff",
+          "lineno": 548,
+          "docstring": null,
+          "cyclomatic_complexity": 4
+        },
+        {
+          "name": "_run_web",
+          "lineno": 571,
+          "docstring": null,
+          "cyclomatic_complexity": 7
+        },
+        {
+          "name": "_run_lifecycle_cleanup",
+          "lineno": 620,
+          "docstring": null,
+          "cyclomatic_complexity": 1
+        },
+        {
+          "name": "_resolve_safe_mode",
+          "lineno": 637,
+          "docstring": null,
+          "cyclomatic_complexity": 2
+        },
+        {
+          "name": "_record_timing",
+          "lineno": 643,
+          "docstring": null,
+          "cyclomatic_complexity": 1
+        },
+        {
+          "name": "_emit_command_summary",
+          "lineno": 647,
+          "docstring": null,
+          "cyclomatic_complexity": 4
+        }
+      ],
+      "cyclomatic_complexity": 42,
+      "fan_in": 1,
+      "fan_out": 12
+    },
+    {
+      "path": "strucin/cli/ui.py",
+      "module_path": "strucin.cli.ui",
+      "loc": 111,
+      "size_bytes": 3122,
+      "docstring": null,
+      "imports": [
+        {
+          "kind": "from",
+          "module": "__future__",
+          "level": 0,
+          "names": [
+            "annotations"
+          ]
+        },
+        {
+          "kind": "import",
+          "module": null,
+          "level": 0,
+          "names": [
+            "sys"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "typing",
+          "level": 0,
+          "names": [
+            "Any"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "rich.console",
+          "level": 0,
+          "names": [
+            "Console"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "rich.progress",
+          "level": 0,
+          "names": [
+            "BarColumn",
+            "Progress",
+            "SpinnerColumn",
+            "TextColumn"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "rich.table",
+          "level": 0,
+          "names": [
+            "Table"
+          ]
+        }
+      ],
+      "classes": [],
+      "functions": [
+        {
+          "name": "_get_console",
+          "lineno": 20,
+          "docstring": null,
+          "cyclomatic_complexity": 2
+        },
+        {
+          "name": "_get_err_console",
+          "lineno": 27,
+          "docstring": null,
+          "cyclomatic_complexity": 2
+        },
+        {
+          "name": "print_error",
+          "lineno": 34,
+          "docstring": null,
+          "cyclomatic_complexity": 2
+        },
+        {
+          "name": "print_success",
+          "lineno": 42,
+          "docstring": null,
+          "cyclomatic_complexity": 2
+        },
+        {
+          "name": "print_info",
+          "lineno": 50,
+          "docstring": null,
+          "cyclomatic_complexity": 2
+        },
+        {
+          "name": "print_warning",
+          "lineno": 58,
+          "docstring": null,
+          "cyclomatic_complexity": 2
+        },
+        {
+          "name": "print_progress",
+          "lineno": 66,
+          "docstring": null,
+          "cyclomatic_complexity": 2
+        },
+        {
+          "name": "create_progress",
+          "lineno": 79,
+          "docstring": null,
+          "cyclomatic_complexity": 2
+        },
+        {
+          "name": "format_table",
+          "lineno": 90,
+          "docstring": null,
+          "cyclomatic_complexity": 4
+        },
+        {
+          "name": "format_row",
+          "lineno": 105,
+          "docstring": null,
+          "cyclomatic_complexity": 1
+        }
+      ],
+      "cyclomatic_complexity": 14,
+      "fan_in": 1,
+      "fan_out": 0
+    },
+    {
+      "path": "strucin/core/__init__.py",
+      "module_path": "strucin.core",
+      "loc": 3,
+      "size_bytes": 54,
+      "docstring": "Core analysis engine for StrucIn.",
+      "imports": [],
+      "classes": [],
+      "functions": [],
+      "cyclomatic_complexity": 1,
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    {
+      "path": "strucin/core/analysis_cache.py",
+      "module_path": "strucin.core.analysis_cache",
+      "loc": 123,
+      "size_bytes": 4865,
+      "docstring": "Analysis cache: SHA-256-keyed per-file persistence for AST analysis results.\n\nCache entries are keyed by relative file path.  Each entry stores:\n\n- ``sha256``      \u2014 content hash of the source file at analysis time.\n- ``module_path`` \u2014 the resolved module path (invalidates on rename).\n- ``analysis``    \u2014 serialised ``FileAnalysis`` + ``ImportInfo`` payload.\n\nOn read, both the hash and module_path must match before the cached entry\nis used.  Any mismatch triggers a fresh analysis pass.\n\nThe top-level JSON payload includes a ``cache_version`` field.  If the\nfield is absent or does not equal :data:`CACHE_VERSION`, the entire cache\nfile is discarded so stale entries can never surface after a schema change.",
+      "imports": [
+        {
+          "kind": "from",
+          "module": "__future__",
+          "level": 0,
+          "names": [
+            "annotations"
+          ]
+        },
+        {
+          "kind": "import",
+          "module": null,
+          "level": 0,
+          "names": [
+            "hashlib"
+          ]
+        },
+        {
+          "kind": "import",
+          "module": null,
+          "level": 0,
+          "names": [
+            "json"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "dataclasses",
+          "level": 0,
+          "names": [
+            "asdict"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "pathlib",
+          "level": 0,
+          "names": [
+            "Path"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.core.artifacts",
+          "level": 0,
+          "names": [
+            "build_artifact_metadata"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.core.models",
+          "level": 0,
+          "names": [
+            "ClassInfo",
+            "FileAnalysis",
+            "FunctionInfo",
+            "ImportInfo"
+          ]
+        }
+      ],
+      "classes": [],
+      "functions": [
+        {
+          "name": "hash_file",
+          "lineno": 32,
+          "docstring": "Return the SHA-256 hex digest of the file at *path*.",
+          "cyclomatic_complexity": 2
+        },
+        {
+          "name": "make_cache_payload",
+          "lineno": 41,
+          "docstring": "Serialise a ``FileAnalysis`` + imports list for cache storage.",
+          "cyclomatic_complexity": 1
+        },
+        {
+          "name": "restore_cached_analysis",
+          "lineno": 59,
+          "docstring": "Reconstruct a ``(FileAnalysis, imports)`` pair from a cache payload.\n\nReturns ``None`` if the payload is structurally invalid so the caller\ncan fall back to a fresh analysis pass.",
+          "cyclomatic_complexity": 4
+        },
+        {
+          "name": "load_analysis_cache",
+          "lineno": 89,
+          "docstring": "Load per-file cache entries from *cache_path*; returns empty dict on miss.\n\nReturns an empty dict when the file is absent, unreadable, or was written\nby a different :data:`CACHE_VERSION` so callers always get a clean slate.",
+          "cyclomatic_complexity": 6
+        },
+        {
+          "name": "write_analysis_cache",
+          "lineno": 111,
+          "docstring": "Persist *entries* to *cache_path* as JSON.",
+          "cyclomatic_complexity": 1
+        }
+      ],
+      "cyclomatic_complexity": 10,
+      "fan_in": 1,
+      "fan_out": 2
+    },
+    {
+      "path": "strucin/core/analyzer.py",
+      "module_path": "strucin.core.analyzer",
+      "loc": 334,
+      "size_bytes": 11890,
+      "docstring": "Repository analysis orchestrator.\n\nOrchestrates the full analysis pipeline:\n\n1. Scan the repository for Python files (``indexer``).\n2. Parse each file's AST, extracting imports, classes, functions, and\n   cyclomatic complexity \u2014 in parallel via ``ThreadPoolExecutor``.\n3. Resolve internal import targets and build the dependency graph\n   (``import_resolver``).\n4. Compute fan-in / fan-out and detect cycles (``metrics``).\n5. Persist results to JSON artefacts.\n\nPer-file results are cached by SHA-256 content hash (``analysis_cache``)\nso incremental re-runs only re-parse changed files.\n\nNote on executor choice\n-----------------------\nBy default (``executor=\"auto\"``) ``ThreadPoolExecutor`` is used because this\nworkload is I/O-bound for typical repository sizes: disk reads and file hashing\ndominate ``ast.parse`` CPU time.  When ``executor=\"auto\"`` and the repository\ncontains more than 2 000 files, ``ProcessPoolExecutor`` is selected instead to\nexploit multiple CPU cores.  Use ``executor=\"thread\"`` or ``executor=\"process\"``\nto force a specific backend regardless of corpus size.",
+      "imports": [
+        {
+          "kind": "from",
+          "module": "__future__",
+          "level": 0,
+          "names": [
+            "annotations"
+          ]
+        },
+        {
+          "kind": "import",
+          "module": null,
+          "level": 0,
+          "names": [
+            "ast"
+          ]
+        },
+        {
+          "kind": "import",
+          "module": null,
+          "level": 0,
+          "names": [
+            "hashlib"
+          ]
+        },
+        {
+          "kind": "import",
+          "module": null,
+          "level": 0,
+          "names": [
+            "json"
+          ]
+        },
+        {
+          "kind": "import",
+          "module": null,
+          "level": 0,
+          "names": [
+            "logging"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "concurrent.futures",
+          "level": 0,
+          "names": [
+            "ProcessPoolExecutor",
+            "ThreadPoolExecutor"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "dataclasses",
+          "level": 0,
+          "names": [
+            "asdict"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "datetime",
+          "level": 0,
+          "names": [
+            "UTC",
+            "datetime"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "functools",
+          "level": 0,
+          "names": [
+            "partial"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "pathlib",
+          "level": 0,
+          "names": [
+            "Path"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.core.analysis_cache",
+          "level": 0,
+          "names": [
+            "load_analysis_cache",
+            "make_cache_payload",
+            "restore_cached_analysis",
+            "write_analysis_cache"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.core.artifacts",
+          "level": 0,
+          "names": [
+            "build_artifact_metadata"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.core.import_resolver",
+          "level": 0,
+          "names": [
+            "build_graph_edges"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.core.indexer",
+          "level": 0,
+          "names": [
+            "FileMetadata",
+            "scan_repository"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.core.metrics",
+          "level": 0,
+          "names": [
+            "build_adjacency",
+            "compute_fan_metrics",
+            "detect_cycles"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.core.models",
+          "level": 0,
+          "names": [
+            "AnalysisResult"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.core.models",
+          "level": 0,
+          "names": [
+            "ClassInfo"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.core.models",
+          "level": 0,
+          "names": [
+            "DependencyEdge"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.core.models",
+          "level": 0,
+          "names": [
+            "FileAnalysis"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.core.models",
+          "level": 0,
+          "names": [
+            "FunctionInfo"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.core.models",
+          "level": 0,
+          "names": [
+            "ImportInfo"
+          ]
+        }
+      ],
+      "classes": [],
+      "functions": [
+        {
+          "name": "_node_complexity",
+          "lineno": 76,
+          "docstring": null,
+          "cyclomatic_complexity": 1
+        },
+        {
+          "name": "_extract_imports",
+          "lineno": 81,
+          "docstring": null,
+          "cyclomatic_complexity": 4
+        },
+        {
+          "name": "_extract_functions",
+          "lineno": 105,
+          "docstring": null,
+          "cyclomatic_complexity": 3
+        },
+        {
+          "name": "_extract_classes",
+          "lineno": 120,
+          "docstring": null,
+          "cyclomatic_complexity": 3
+        },
+        {
+          "name": "_analyze_single_file",
+          "lineno": 139,
+          "docstring": "Parse *source* and return a ``(FileAnalysis, imports)`` pair.\n\n*source* should already be decoded (with ``errors='replace'`` so any invalid\nbytes are visible as U+FFFD rather than silently dropped).",
+          "cyclomatic_complexity": 3
+        },
+        {
+          "name": "_analyze_file_with_cache",
+          "lineno": 185,
+          "docstring": "Read the file once as raw bytes, hash it, decode, then analyse.\n\nReading as bytes ensures the SHA-256 hash and the parsed source text are\nderived from the same bytes.  ``errors='replace'`` makes any invalid UTF-8\nbytes visible (as U+FFFD) rather than silently dropping them.",
+          "cyclomatic_complexity": 4
+        },
+        {
+          "name": "analyze_repository",
+          "lineno": 223,
+          "docstring": null,
+          "cyclomatic_complexity": 6
+        },
+        {
+          "name": "write_analysis",
+          "lineno": 301,
+          "docstring": null,
+          "cyclomatic_complexity": 1
+        }
+      ],
+      "cyclomatic_complexity": 18,
+      "fan_in": 5,
+      "fan_out": 6
+    },
+    {
+      "path": "strucin/core/artifacts.py",
+      "module_path": "strucin.core.artifacts",
+      "loc": 28,
+      "size_bytes": 727,
+      "docstring": null,
+      "imports": [
+        {
+          "kind": "from",
+          "module": "__future__",
+          "level": 0,
+          "names": [
+            "annotations"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "dataclasses",
+          "level": 0,
+          "names": [
+            "asdict",
+            "dataclass"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "datetime",
+          "level": 0,
+          "names": [
+            "UTC",
+            "datetime"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin._version",
+          "level": 0,
+          "names": [
+            "__version__"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "ArtifactMetadata",
+          "lineno": 12,
+          "docstring": null
+        }
+      ],
+      "functions": [
+        {
+          "name": "build_artifact_metadata",
+          "lineno": 19,
+          "docstring": null,
+          "cyclomatic_complexity": 1
+        }
+      ],
+      "cyclomatic_complexity": 1,
+      "fan_in": 6,
+      "fan_out": 1
+    },
+    {
+      "path": "strucin/core/config.py",
+      "module_path": "strucin.core.config",
+      "loc": 286,
+      "size_bytes": 8969,
+      "docstring": null,
+      "imports": [
+        {
+          "kind": "from",
+          "module": "__future__",
+          "level": 0,
+          "names": [
+            "annotations"
+          ]
+        },
+        {
+          "kind": "import",
+          "module": null,
+          "level": 0,
+          "names": [
+            "logging"
+          ]
+        },
+        {
+          "kind": "import",
+          "module": null,
+          "level": 0,
+          "names": [
+            "tomllib"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "dataclasses",
+          "level": 0,
+          "names": [
+            "dataclass"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "os",
+          "level": 0,
+          "names": [
+            "cpu_count"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "pathlib",
+          "level": 0,
+          "names": [
+            "Path"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "typing",
+          "level": 0,
+          "names": [
+            "Any",
+            "cast"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.core.indexer",
+          "level": 0,
+          "names": [
+            "EXCLUDED_DIRS"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "OutputConfig",
+          "lineno": 16,
+          "docstring": null
+        },
+        {
+          "name": "SearchConfig",
+          "lineno": 27,
+          "docstring": null
+        },
+        {
+          "name": "LLMConfig",
+          "lineno": 34,
+          "docstring": null
+        },
+        {
+          "name": "PerformanceConfig",
+          "lineno": 43,
+          "docstring": null
+        },
+        {
+          "name": "LifecycleConfig",
+          "lineno": 49,
+          "docstring": null
+        },
+        {
+          "name": "SecurityConfig",
+          "lineno": 54,
+          "docstring": null
+        },
+        {
+          "name": "ObservabilityConfig",
+          "lineno": 59,
+          "docstring": null
+        },
+        {
+          "name": "ReportConfig",
+          "lineno": 65,
+          "docstring": null
+        },
+        {
+          "name": "StrucInConfig",
+          "lineno": 72,
+          "docstring": null
+        }
+      ],
+      "functions": [
+        {
+          "name": "default_config",
+          "lineno": 84,
+          "docstring": null,
+          "cyclomatic_complexity": 1
+        },
+        {
+          "name": "load_config",
+          "lineno": 98,
+          "docstring": null,
+          "cyclomatic_complexity": 4
+        },
+        {
+          "name": "_parse_str_list",
+          "lineno": 219,
+          "docstring": "Merge user-supplied directory names with the *fallback* set.\n\nCore exclusions (.git, __pycache__, etc.) are never removed \u2014 user entries\nare **added** on top of the defaults, not used as a replacement.",
+          "cyclomatic_complexity": 2
+        },
+        {
+          "name": "_as_str",
+          "lineno": 231,
+          "docstring": null,
+          "cyclomatic_complexity": 2
+        },
+        {
+          "name": "_as_table",
+          "lineno": 237,
+          "docstring": "Return *value* if it is a TOML table (dict), else an empty dict.\n\nReplaces ``cast(dict[str, Any], ...)`` with an actual runtime check so a\nhand-edited config that has, e.g., ``scan = \"string\"`` does not produce a\nconfusing ``AttributeError`` later.",
+          "cyclomatic_complexity": 2
+        },
+        {
+          "name": "_as_int",
+          "lineno": 249,
+          "docstring": null,
+          "cyclomatic_complexity": 2
+        },
+        {
+          "name": "_as_filename",
+          "lineno": 256,
+          "docstring": null,
+          "cyclomatic_complexity": 3
+        },
+        {
+          "name": "_as_bool",
+          "lineno": 269,
+          "docstring": null,
+          "cyclomatic_complexity": 2
+        },
+        {
+          "name": "_as_executor_type",
+          "lineno": 275,
+          "docstring": "Return *value* if it is one of the accepted executor strings, else *fallback*.",
+          "cyclomatic_complexity": 3
+        }
+      ],
+      "cyclomatic_complexity": 13,
+      "fan_in": 4,
+      "fan_out": 1
+    },
+    {
+      "path": "strucin/core/diff.py",
+      "module_path": "strucin.core.diff",
+      "loc": 437,
+      "size_bytes": 13562,
+      "docstring": "Diff two StrucIn analysis JSON artefacts and produce a structured report.\n\nTypical usage::\n\n    from pathlib import Path\n    from strucin.core.diff import diff_analyses, render_diff_markdown\n\n    result = diff_analyses(Path(\"before.json\"), Path(\"after.json\"))\n    print(render_diff_markdown(result))",
+      "imports": [
+        {
+          "kind": "from",
+          "module": "__future__",
+          "level": 0,
+          "names": [
+            "annotations"
+          ]
+        },
+        {
+          "kind": "import",
+          "module": null,
+          "level": 0,
+          "names": [
+            "json"
+          ]
+        },
+        {
+          "kind": "import",
+          "module": null,
+          "level": 0,
+          "names": [
+            "logging"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "dataclasses",
+          "level": 0,
+          "names": [
+            "asdict",
+            "dataclass"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "pathlib",
+          "level": 0,
+          "names": [
+            "Path"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.exceptions",
+          "level": 0,
+          "names": [
+            "AnalysisError"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "ComplexityDelta",
+          "lineno": 48,
+          "docstring": "Change in cyclomatic complexity for a single module."
+        },
+        {
+          "name": "CouplingDelta",
+          "lineno": 58,
+          "docstring": "Change in fan-in or fan-out for a single module."
+        },
+        {
+          "name": "LocDelta",
+          "lineno": 69,
+          "docstring": "Change in lines of code for a single module."
+        },
+        {
+          "name": "DiffSummary",
+          "lineno": 79,
+          "docstring": "Aggregate statistics for a diff run."
+        },
+        {
+          "name": "DiffResult",
+          "lineno": 91,
+          "docstring": "Complete diff between two StrucIn analysis snapshots."
+        }
+      ],
+      "functions": [
+        {
+          "name": "load_analysis_json",
+          "lineno": 111,
+          "docstring": "Load and minimally validate an analysis JSON file.\n\nArgs:\n    path: Absolute or relative path to the analysis JSON artefact.\n\nReturns:\n    Parsed JSON payload as a plain dict.\n\nRaises:\n    AnalysisError: If the file cannot be read, is not valid JSON, or is\n        missing any of the required top-level keys.",
+          "cyclomatic_complexity": 7
+        },
+        {
+          "name": "_files_by_module",
+          "lineno": 152,
+          "docstring": "Return a module_path \u2192 file-dict mapping from a parsed analysis payload.",
+          "cyclomatic_complexity": 5
+        },
+        {
+          "name": "_cycles_as_frozensets",
+          "lineno": 166,
+          "docstring": "Convert the ``cycles`` list to a set of frozensets for order-independent comparison.",
+          "cyclomatic_complexity": 4
+        },
+        {
+          "name": "_int_field",
+          "lineno": 178,
+          "docstring": null,
+          "cyclomatic_complexity": 2
+        },
+        {
+          "name": "diff_analyses",
+          "lineno": 188,
+          "docstring": "Compare two StrucIn analysis JSON files and return a structured diff.\n\nArgs:\n    before_path: Path to the baseline analysis JSON artefact.\n    after_path: Path to the updated analysis JSON artefact.\n\nReturns:\n    A :class:`DiffResult` describing all structural changes between the\n    two snapshots.\n\nRaises:\n    AnalysisError: If either file cannot be loaded or validated.",
+          "cyclomatic_complexity": 5
+        },
+        {
+          "name": "_md_module_list",
+          "lineno": 329,
+          "docstring": null,
+          "cyclomatic_complexity": 2
+        },
+        {
+          "name": "_md_cycle_list",
+          "lineno": 338,
+          "docstring": null,
+          "cyclomatic_complexity": 3
+        },
+        {
+          "name": "_md_complexity_section",
+          "lineno": 348,
+          "docstring": null,
+          "cyclomatic_complexity": 3
+        },
+        {
+          "name": "_md_coupling_section",
+          "lineno": 361,
+          "docstring": null,
+          "cyclomatic_complexity": 3
+        },
+        {
+          "name": "_md_loc_section",
+          "lineno": 379,
+          "docstring": null,
+          "cyclomatic_complexity": 3
+        },
+        {
+          "name": "render_diff_markdown",
+          "lineno": 392,
+          "docstring": "Render a :class:`DiffResult` as a human-readable Markdown report.\n\nArgs:\n    diff: The diff result produced by :func:`diff_analyses`.\n\nReturns:\n    A UTF-8-safe Markdown string.",
+          "cyclomatic_complexity": 1
+        },
+        {
+          "name": "render_diff_json",
+          "lineno": 428,
+          "docstring": "Serialize a :class:`DiffResult` to a JSON string.\n\nArgs:\n    diff: The diff result produced by :func:`diff_analyses`.\n\nReturns:\n    A pretty-printed JSON string (2-space indent, trailing newline).",
+          "cyclomatic_complexity": 1
+        }
+      ],
+      "cyclomatic_complexity": 28,
+      "fan_in": 1,
+      "fan_out": 1
+    },
+    {
+      "path": "strucin/core/explainer.py",
+      "module_path": "strucin.core.explainer",
+      "loc": 422,
+      "size_bytes": 15023,
+      "docstring": null,
+      "imports": [
+        {
+          "kind": "from",
+          "module": "__future__",
+          "level": 0,
+          "names": [
+            "annotations"
+          ]
+        },
+        {
+          "kind": "import",
+          "module": null,
+          "level": 0,
+          "names": [
+            "hashlib"
+          ]
+        },
+        {
+          "kind": "import",
+          "module": null,
+          "level": 0,
+          "names": [
+            "json"
+          ]
+        },
+        {
+          "kind": "import",
+          "module": null,
+          "level": 0,
+          "names": [
+            "logging"
+          ]
+        },
+        {
+          "kind": "import",
+          "module": null,
+          "level": 0,
+          "names": [
+            "re"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "dataclasses",
+          "level": 0,
+          "names": [
+            "dataclass"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "dataclasses",
+          "level": 0,
+          "names": [
+            "replace"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "datetime",
+          "level": 0,
+          "names": [
+            "UTC",
+            "datetime"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "pathlib",
+          "level": 0,
+          "names": [
+            "Path"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "typing",
+          "level": 0,
+          "names": [
+            "cast"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.core.analyzer",
+          "level": 0,
+          "names": [
+            "AnalysisResult",
+            "FileAnalysis",
+            "analyze_repository"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.core.artifacts",
+          "level": 0,
+          "names": [
+            "build_artifact_metadata"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.core.config",
+          "level": 0,
+          "names": [
+            "LLMConfig"
+          ]
+        },
+        {
+          "kind": "import",
+          "module": null,
+          "level": 0,
+          "names": [
+            "os"
+          ]
+        },
+        {
+          "kind": "import",
+          "module": null,
+          "level": 0,
+          "names": [
+            "anthropic"
+          ]
+        },
+        {
+          "kind": "import",
+          "module": null,
+          "level": 0,
+          "names": [
+            "openai"
+          ]
+        },
+        {
+          "kind": "import",
+          "module": null,
+          "level": 0,
+          "names": [
+            "anthropic"
+          ]
+        },
+        {
+          "kind": "import",
+          "module": null,
+          "level": 0,
+          "names": [
+            "openai"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "ExplainOutput",
+          "lineno": 43,
+          "docstring": null
+        }
+      ],
+      "functions": [
+        {
+          "name": "_redact_text",
+          "lineno": 50,
+          "docstring": null,
+          "cyclomatic_complexity": 3
+        },
+        {
+          "name": "redact_analysis",
+          "lineno": 60,
+          "docstring": "Return a copy of *analysis* with secrets redacted from all docstrings.\n\nOnly ``docstring`` fields are modified; module names, paths, metrics, and\ndependency edges are intentionally preserved so the structural analysis\nremains accurate.  Uses :func:`dataclasses.replace` so new fields added\nto :class:`FileAnalysis` are automatically carried through.",
+          "cyclomatic_complexity": 2
+        },
+        {
+          "name": "_limited_context",
+          "lineno": 77,
+          "docstring": null,
+          "cyclomatic_complexity": 1
+        },
+        {
+          "name": "_cache_key_from_analysis",
+          "lineno": 100,
+          "docstring": null,
+          "cyclomatic_complexity": 1
+        },
+        {
+          "name": "_largest_files",
+          "lineno": 105,
+          "docstring": null,
+          "cyclomatic_complexity": 1
+        },
+        {
+          "name": "_hotspots",
+          "lineno": 109,
+          "docstring": null,
+          "cyclomatic_complexity": 1
+        },
+        {
+          "name": "_most_central",
+          "lineno": 117,
+          "docstring": null,
+          "cyclomatic_complexity": 1
+        },
+        {
+          "name": "_render_cycle_explanations",
+          "lineno": 121,
+          "docstring": null,
+          "cyclomatic_complexity": 4
+        },
+        {
+          "name": "_render_onboarding_guide",
+          "lineno": 142,
+          "docstring": null,
+          "cyclomatic_complexity": 6
+        },
+        {
+          "name": "_detect_llm",
+          "lineno": 194,
+          "docstring": "Returns (provider, model) or None. Checks Anthropic first, then OpenAI.",
+          "cyclomatic_complexity": 7
+        },
+        {
+          "name": "_call_llm",
+          "lineno": 215,
+          "docstring": "Call LLM API. Returns markdown string or None on any failure.\n\nThe system prompt is passed via the provider's dedicated mechanism\n(``system=`` for Anthropic, a ``role:\"system\"`` message for OpenAI) rather\nthan being concatenated into the user message.",
+          "cyclomatic_complexity": 5
+        },
+        {
+          "name": "generate_explanation",
+          "lineno": 254,
+          "docstring": null,
+          "cyclomatic_complexity": 10
+        },
+        {
+          "name": "_load_cache",
+          "lineno": 328,
+          "docstring": "Return cached entries keyed by cache_key.\n\nReturns an empty dict when the file is absent, unparseable, or was written\nby a different :data:`CACHE_VERSION`.",
+          "cyclomatic_complexity": 4
+        },
+        {
+          "name": "_write_cache",
+          "lineno": 348,
+          "docstring": null,
+          "cyclomatic_complexity": 3
+        },
+        {
+          "name": "explain_repository",
+          "lineno": 358,
+          "docstring": null,
+          "cyclomatic_complexity": 5
+        },
+        {
+          "name": "write_explanation",
+          "lineno": 408,
+          "docstring": null,
+          "cyclomatic_complexity": 1
+        },
+        {
+          "name": "write_explain_metadata",
+          "lineno": 412,
+          "docstring": null,
+          "cyclomatic_complexity": 1
+        }
+      ],
+      "cyclomatic_complexity": 40,
+      "fan_in": 3,
+      "fan_out": 3
+    },
+    {
+      "path": "strucin/core/import_resolver.py",
+      "module_path": "strucin.core.import_resolver",
+      "loc": 151,
+      "size_bytes": 5531,
+      "docstring": "Import resolution: maps raw import statements to internal module targets.\n\nAlgorithm overview\n------------------\nFor each file we walk its ``ImportInfo`` list and attempt to map every\nimported name to a module that exists in the indexed repository.\n\nRelative imports (``from . import x``, ``from .. import y``) are first\nresolved to an absolute package path based on the importing file's position\nin the package hierarchy, then matched against the set of known modules.\n\n    ``level=1`` (``from . import x``)  \u2014 stay in the current package.\n    ``level=2`` (``from .. import x``) \u2014 ascend one level, and so on.\n\nIf the level exceeds the package depth, an empty string is returned and\nthe import is treated as unresolvable (no edge added).\n\nAbsolute imports are matched via a longest-prefix search: ``from pkg.sub\nimport Cls`` will match ``pkg.sub`` even if ``Cls`` itself is not a\ntop-level module.\n\nUnknown targets (third-party or stdlib) are silently discarded \u2014 only\ninternal edges are recorded in the dependency graph.",
+      "imports": [
+        {
+          "kind": "from",
+          "module": "__future__",
+          "level": 0,
+          "names": [
+            "annotations"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.core.indexer",
+          "level": 0,
+          "names": [
+            "FileMetadata"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.core.models",
+          "level": 0,
+          "names": [
+            "DependencyEdge",
+            "ImportInfo"
+          ]
+        }
+      ],
+      "classes": [],
+      "functions": [
+        {
+          "name": "_candidate_prefix_modules",
+          "lineno": 32,
+          "docstring": "Return every dot-prefix of *module*, longest first.",
+          "cyclomatic_complexity": 1
+        },
+        {
+          "name": "_resolve_to_internal",
+          "lineno": 38,
+          "docstring": "Return the longest prefix of *module* that is a known internal module.",
+          "cyclomatic_complexity": 3
+        },
+        {
+          "name": "_package_parts",
+          "lineno": 46,
+          "docstring": "Return the package component list for the file's containing package.",
+          "cyclomatic_complexity": 2
+        },
+        {
+          "name": "_resolve_relative_base",
+          "lineno": 54,
+          "docstring": "Return the dotted package prefix reached by ascending *level* steps.\n\n``level=1`` stays in the current package; ``level=2`` ascends one\npackage, and so on.  Returns an empty string when *level* exceeds the\npackage depth \u2014 the caller treats this as an unresolvable import.",
+          "cyclomatic_complexity": 2
+        },
+        {
+          "name": "_join_module",
+          "lineno": 68,
+          "docstring": null,
+          "cyclomatic_complexity": 3
+        },
+        {
+          "name": "_resolve_import_targets",
+          "lineno": 76,
+          "docstring": "Expand an ``ImportInfo`` into candidate dotted module paths.",
+          "cyclomatic_complexity": 5
+        },
+        {
+          "name": "_resolve_internal_targets_for_import",
+          "lineno": 95,
+          "docstring": null,
+          "cyclomatic_complexity": 11
+        },
+        {
+          "name": "build_graph_edges",
+          "lineno": 134,
+          "docstring": "Build directed dependency graph edges from resolved import information.",
+          "cyclomatic_complexity": 4
+        }
+      ],
+      "cyclomatic_complexity": 24,
+      "fan_in": 1,
+      "fan_out": 2
+    },
+    {
+      "path": "strucin/core/indexer.py",
+      "module_path": "strucin.core.indexer",
+      "loc": 104,
+      "size_bytes": 3179,
+      "docstring": null,
+      "imports": [
+        {
+          "kind": "from",
+          "module": "__future__",
+          "level": 0,
+          "names": [
+            "annotations"
+          ]
+        },
+        {
+          "kind": "import",
+          "module": null,
+          "level": 0,
+          "names": [
+            "json"
+          ]
+        },
+        {
+          "kind": "import",
+          "module": null,
+          "level": 0,
+          "names": [
+            "os"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "concurrent.futures",
+          "level": 0,
+          "names": [
+            "ThreadPoolExecutor"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "dataclasses",
+          "level": 0,
+          "names": [
+            "asdict",
+            "dataclass"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "datetime",
+          "level": 0,
+          "names": [
+            "UTC",
+            "datetime"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "functools",
+          "level": 0,
+          "names": [
+            "partial"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "pathlib",
+          "level": 0,
+          "names": [
+            "Path"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.core.artifacts",
+          "level": 0,
+          "names": [
+            "build_artifact_metadata"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "FileMetadata",
+          "lineno": 17,
+          "docstring": null
+        },
+        {
+          "name": "RepoIndex",
+          "lineno": 25,
+          "docstring": null
+        }
+      ],
+      "functions": [
+        {
+          "name": "_module_path_from_relative",
+          "lineno": 32,
+          "docstring": null,
+          "cyclomatic_complexity": 3
+        },
+        {
+          "name": "_count_loc",
+          "lineno": 44,
+          "docstring": null,
+          "cyclomatic_complexity": 1
+        },
+        {
+          "name": "_build_file_metadata",
+          "lineno": 49,
+          "docstring": null,
+          "cyclomatic_complexity": 1
+        },
+        {
+          "name": "scan_repository",
+          "lineno": 59,
+          "docstring": null,
+          "cyclomatic_complexity": 6
+        },
+        {
+          "name": "write_repo_index",
+          "lineno": 94,
+          "docstring": null,
+          "cyclomatic_complexity": 1
+        }
+      ],
+      "cyclomatic_complexity": 8,
+      "fan_in": 5,
+      "fan_out": 1
+    },
+    {
+      "path": "strucin/core/lifecycle.py",
+      "module_path": "strucin.core.lifecycle",
+      "loc": 33,
+      "size_bytes": 1126,
+      "docstring": null,
+      "imports": [
+        {
+          "kind": "from",
+          "module": "__future__",
+          "level": 0,
+          "names": [
+            "annotations"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "datetime",
+          "level": 0,
+          "names": [
+            "UTC",
+            "datetime",
+            "timedelta"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "pathlib",
+          "level": 0,
+          "names": [
+            "Path"
+          ]
+        }
+      ],
+      "classes": [],
+      "functions": [
+        {
+          "name": "cleanup_stale_artifacts",
+          "lineno": 7,
+          "docstring": null,
+          "cyclomatic_complexity": 8
+        }
+      ],
+      "cyclomatic_complexity": 8,
+      "fan_in": 1,
+      "fan_out": 0
+    },
+    {
+      "path": "strucin/core/metrics.py",
+      "module_path": "strucin.core.metrics",
+      "loc": 120,
+      "size_bytes": 4689,
+      "docstring": "Graph metrics and cycle detection for the dependency graph.\n\nCycle detection uses Tarjan's strongly connected components (SCC) algorithm,\nwhich runs in O(V + E) time.  A component is reported as a cycle when it\ncontains more than one node, or when it is a single node with a self-loop\n(a module that imports itself).\n\nThe implementation is **iterative** (uses an explicit work-stack) rather than\nrecursive, so it never hits Python's default recursion limit even on\nrepositories with thousands of mutually-importing modules.\n\nReference: Tarjan, R. E. (1972). Depth-first search and linear graph\nalgorithms. SIAM Journal on Computing, 1(2), 146\u2013160.",
+      "imports": [
+        {
+          "kind": "from",
+          "module": "__future__",
+          "level": 0,
+          "names": [
+            "annotations"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "collections",
+          "level": 0,
+          "names": [
+            "defaultdict"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.core.models",
+          "level": 0,
+          "names": [
+            "DependencyEdge"
+          ]
+        }
+      ],
+      "classes": [],
+      "functions": [
+        {
+          "name": "build_adjacency",
+          "lineno": 23,
+          "docstring": "Return a source \u2192 {targets} adjacency mapping from a list of edges.",
+          "cyclomatic_complexity": 2
+        },
+        {
+          "name": "detect_cycles",
+          "lineno": 31,
+          "docstring": "Return all dependency cycles using Tarjan's SCC algorithm (iterative).\n\nThe algorithm is implemented iteratively using an explicit work-stack to\navoid Python's default recursion limit, which would cause ``RecursionError``\non repositories with dependency chains longer than ~1 000 modules.\n\nAlgorithm phases per node:\n1. Assign a discovery index and lowlink value; push onto the SCC stack.\n2. Advance through sorted neighbours via a persistent iterator, updating\n   lowlink for unvisited neighbours (recurse) and stack-resident ones.\n3. When all neighbours are exhausted (``StopIteration``), propagate lowlink\n   to the parent and, if this node is an SCC root, pop the component.\n\nResults are sorted by (length, members) for deterministic output.",
+          "cyclomatic_complexity": 15
+        },
+        {
+          "name": "_push",
+          "lineno": 61,
+          "docstring": null,
+          "cyclomatic_complexity": 1
+        },
+        {
+          "name": "compute_fan_metrics",
+          "lineno": 106,
+          "docstring": "Return ``(fan_in, fan_out)`` dicts keyed by module path.\n\nfan_out[m] = number of distinct internal modules *m* imports.\nfan_in[m]  = number of distinct internal modules that import *m*.",
+          "cyclomatic_complexity": 2
+        }
+      ],
+      "cyclomatic_complexity": 17,
+      "fan_in": 1,
+      "fan_out": 1
+    },
+    {
+      "path": "strucin/core/models.py",
+      "module_path": "strucin.core.models",
+      "loc": 76,
+      "size_bytes": 1493,
+      "docstring": "Shared dataclass models for the StrucIn analysis pipeline.\n\nAll core analysis types live here so that sub-modules (import_resolver,\nmetrics, analysis_cache) can import them without creating circular\ndependencies with analyzer.py.",
+      "imports": [
+        {
+          "kind": "from",
+          "module": "__future__",
+          "level": 0,
+          "names": [
+            "annotations"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "dataclasses",
+          "level": 0,
+          "names": [
+            "dataclass"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "typing",
+          "level": 0,
+          "names": [
+            "Literal"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "FunctionInfo",
+          "lineno": 24,
+          "docstring": null
+        },
+        {
+          "name": "ClassInfo",
+          "lineno": 32,
+          "docstring": null
+        },
+        {
+          "name": "ImportInfo",
+          "lineno": 39,
+          "docstring": null
+        },
+        {
+          "name": "FileAnalysis",
+          "lineno": 47,
+          "docstring": null
+        },
+        {
+          "name": "DependencyEdge",
+          "lineno": 62,
+          "docstring": null
+        },
+        {
+          "name": "AnalysisResult",
+          "lineno": 68,
+          "docstring": null
+        }
+      ],
+      "functions": [],
+      "cyclomatic_complexity": 1,
+      "fan_in": 4,
+      "fan_out": 0
+    },
+    {
+      "path": "strucin/core/reporter.py",
+      "module_path": "strucin.core.reporter",
+      "loc": 198,
+      "size_bytes": 7538,
+      "docstring": null,
+      "imports": [
+        {
+          "kind": "from",
+          "module": "__future__",
+          "level": 0,
+          "names": [
+            "annotations"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "collections",
+          "level": 0,
+          "names": [
+            "defaultdict"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "dataclasses",
+          "level": 0,
+          "names": [
+            "dataclass"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "pathlib",
+          "level": 0,
+          "names": [
+            "Path"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin",
+          "level": 0,
+          "names": [
+            "__version__"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.core.analyzer",
+          "level": 0,
+          "names": [
+            "AnalysisResult",
+            "FileAnalysis"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.core.config",
+          "level": 0,
+          "names": [
+            "ReportConfig"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.core.explainer",
+          "level": 0,
+          "names": [
+            "redact_analysis"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "RefactorSuggestion",
+          "lineno": 14,
+          "docstring": null
+        }
+      ],
+      "functions": [
+        {
+          "name": "_top_hotspots",
+          "lineno": 20,
+          "docstring": null,
+          "cyclomatic_complexity": 1
+        },
+        {
+          "name": "_largest_modules",
+          "lineno": 25,
+          "docstring": null,
+          "cyclomatic_complexity": 1
+        },
+        {
+          "name": "_largest_packages",
+          "lineno": 29,
+          "docstring": null,
+          "cyclomatic_complexity": 3
+        },
+        {
+          "name": "_most_imported_modules",
+          "lineno": 38,
+          "docstring": null,
+          "cyclomatic_complexity": 1
+        },
+        {
+          "name": "_build_refactor_suggestions",
+          "lineno": 42,
+          "docstring": null,
+          "cyclomatic_complexity": 7
+        },
+        {
+          "name": "generate_markdown_report",
+          "lineno": 102,
+          "docstring": null,
+          "cyclomatic_complexity": 18
+        },
+        {
+          "name": "write_markdown_report",
+          "lineno": 189,
+          "docstring": null,
+          "cyclomatic_complexity": 1
+        }
+      ],
+      "cyclomatic_complexity": 26,
+      "fan_in": 1,
+      "fan_out": 4
+    },
+    {
+      "path": "strucin/core/semantic.py",
+      "module_path": "strucin.core.semantic",
+      "loc": 366,
+      "size_bytes": 12442,
+      "docstring": null,
+      "imports": [
+        {
+          "kind": "from",
+          "module": "__future__",
+          "level": 0,
+          "names": [
+            "annotations"
+          ]
+        },
+        {
+          "kind": "import",
+          "module": null,
+          "level": 0,
+          "names": [
+            "ast"
+          ]
+        },
+        {
+          "kind": "import",
+          "module": null,
+          "level": 0,
+          "names": [
+            "hashlib"
+          ]
+        },
+        {
+          "kind": "import",
+          "module": null,
+          "level": 0,
+          "names": [
+            "json"
+          ]
+        },
+        {
+          "kind": "import",
+          "module": null,
+          "level": 0,
+          "names": [
+            "logging"
+          ]
+        },
+        {
+          "kind": "import",
+          "module": null,
+          "level": 0,
+          "names": [
+            "os"
+          ]
+        },
+        {
+          "kind": "import",
+          "module": null,
+          "level": 0,
+          "names": [
+            "re"
+          ]
+        },
+        {
+          "kind": "import",
+          "module": null,
+          "level": 0,
+          "names": [
+            "threading"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "concurrent.futures",
+          "level": 0,
+          "names": [
+            "ThreadPoolExecutor"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "dataclasses",
+          "level": 0,
+          "names": [
+            "asdict",
+            "dataclass"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "dataclasses",
+          "level": 0,
+          "names": [
+            "replace"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "datetime",
+          "level": 0,
+          "names": [
+            "UTC",
+            "datetime"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "functools",
+          "level": 0,
+          "names": [
+            "partial"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "math",
+          "level": 0,
+          "names": [
+            "sqrt"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "pathlib",
+          "level": 0,
+          "names": [
+            "Path"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "typing",
+          "level": 0,
+          "names": [
+            "Any"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.core.artifacts",
+          "level": 0,
+          "names": [
+            "build_artifact_metadata"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.core.indexer",
+          "level": 0,
+          "names": [
+            "EXCLUDED_DIRS",
+            "FileMetadata",
+            "scan_repository"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "sentence_transformers",
+          "level": 0,
+          "names": [
+            "SentenceTransformer"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "SemanticChunk",
+          "lineno": 30,
+          "docstring": null
+        },
+        {
+          "name": "SemanticIndex",
+          "lineno": 42,
+          "docstring": null
+        },
+        {
+          "name": "SemanticHit",
+          "lineno": 53,
+          "docstring": null
+        }
+      ],
+      "functions": [
+        {
+          "name": "_text_preview",
+          "lineno": 59,
+          "docstring": null,
+          "cyclomatic_complexity": 2
+        },
+        {
+          "name": "_tokenize",
+          "lineno": 66,
+          "docstring": null,
+          "cyclomatic_complexity": 1
+        },
+        {
+          "name": "_hash_token",
+          "lineno": 70,
+          "docstring": null,
+          "cyclomatic_complexity": 1
+        },
+        {
+          "name": "embed_text",
+          "lineno": 76,
+          "docstring": "Return an L2-normalised bag-of-tokens vector for *text*.\n\nEach token is hashed via BLAKE2b (8-byte digest) into one of *dimensions*\nbuckets and its count is incremented.  The resulting count vector is then\ndivided by its Euclidean (L2) norm so that the dot product of any two\nreturned vectors equals their cosine similarity \u2014 enabling efficient nearest-\nneighbour search without a separate normalisation step at query time.\n\nBLAKE2b is chosen because it is fast, available in the standard library, and\ndistributes tokens uniformly across buckets with low collision probability.\n\n**Known limitations vs neural embeddings:**\n- Captures *vocabulary overlap*, not semantic meaning (synonyms score 0).\n- Sensitive to token surface form; \"run\" and \"running\" are unrelated buckets.\n- High-dimensional spaces are sparse; recall degrades on very short queries.\n- No positional or contextual information is encoded.\n\nUse the ``sentence-transformers`` back-end (``strucin[embeddings]``) for\nhigher-quality semantic search when the extra dependency is acceptable.",
+          "cyclomatic_complexity": 3
+        },
+        {
+          "name": "_slice_source",
+          "lineno": 107,
+          "docstring": null,
+          "cyclomatic_complexity": 2
+        },
+        {
+          "name": "_python_chunks_for_file",
+          "lineno": 114,
+          "docstring": null,
+          "cyclomatic_complexity": 8
+        },
+        {
+          "name": "_doc_chunks",
+          "lineno": 187,
+          "docstring": null,
+          "cyclomatic_complexity": 5
+        },
+        {
+          "name": "_assign_chunk_ids",
+          "lineno": 216,
+          "docstring": null,
+          "cyclomatic_complexity": 1
+        },
+        {
+          "name": "_chunks_for_metadata",
+          "lineno": 220,
+          "docstring": null,
+          "cyclomatic_complexity": 1
+        },
+        {
+          "name": "_load_sentence_transformer",
+          "lineno": 225,
+          "docstring": null,
+          "cyclomatic_complexity": 4
+        },
+        {
+          "name": "_embed_texts",
+          "lineno": 246,
+          "docstring": "Returns (vectors, actual_dims, actual_model_used).",
+          "cyclomatic_complexity": 4
+        },
+        {
+          "name": "build_semantic_index",
+          "lineno": 265,
+          "docstring": null,
+          "cyclomatic_complexity": 3
+        },
+        {
+          "name": "write_semantic_index",
+          "lineno": 306,
+          "docstring": null,
+          "cyclomatic_complexity": 1
+        },
+        {
+          "name": "load_semantic_index",
+          "lineno": 325,
+          "docstring": null,
+          "cyclomatic_complexity": 1
+        },
+        {
+          "name": "_dot",
+          "lineno": 339,
+          "docstring": null,
+          "cyclomatic_complexity": 1
+        },
+        {
+          "name": "search_semantic_index",
+          "lineno": 343,
+          "docstring": null,
+          "cyclomatic_complexity": 6
+        }
+      ],
+      "cyclomatic_complexity": 29,
+      "fan_in": 2,
+      "fan_out": 2
+    },
+    {
+      "path": "strucin/exceptions.py",
+      "module_path": "strucin.exceptions",
+      "loc": 42,
+      "size_bytes": 1037,
+      "docstring": "Custom exception hierarchy for StrucIn.\n\nAll exceptions raised by the public API are subclasses of :exc:`StrucInError`\nso consumers can catch library errors without accidentally catching unrelated\nbuilt-in exceptions::\n\n    from strucin import StrucInError\n    try:\n        analyze_repository(path)\n    except StrucInError as exc:\n        print(f\"strucin failed: {exc}\")",
+      "imports": [
+        {
+          "kind": "from",
+          "module": "__future__",
+          "level": 0,
+          "names": [
+            "annotations"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "StrucInError",
+          "lineno": 25,
+          "docstring": "Base class for all StrucIn errors."
+        },
+        {
+          "name": "ConfigError",
+          "lineno": 29,
+          "docstring": "Raised when configuration is invalid or cannot be loaded."
+        },
+        {
+          "name": "AnalysisError",
+          "lineno": 33,
+          "docstring": "Raised when repository analysis fails unrecoverably."
+        },
+        {
+          "name": "CacheError",
+          "lineno": 37,
+          "docstring": "Raised when cache operations fail in a non-recoverable way."
+        },
+        {
+          "name": "DashboardSchemaError",
+          "lineno": 41,
+          "docstring": "Raised when serialised dashboard data fails schema validation."
+        }
+      ],
+      "functions": [],
+      "cyclomatic_complexity": 1,
+      "fan_in": 3,
+      "fan_out": 0
+    },
+    {
+      "path": "strucin/utils/__init__.py",
+      "module_path": "strucin.utils",
+      "loc": 1,
+      "size_bytes": 35,
+      "docstring": "Utility helpers for StrucIn.",
+      "imports": [],
+      "classes": [],
+      "functions": [],
+      "cyclomatic_complexity": 1,
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    {
+      "path": "strucin/utils/logging.py",
+      "module_path": "strucin.utils.logging",
+      "loc": 23,
+      "size_bytes": 520,
+      "docstring": null,
+      "imports": [
+        {
+          "kind": "from",
+          "module": "__future__",
+          "level": 0,
+          "names": [
+            "annotations"
+          ]
+        },
+        {
+          "kind": "import",
+          "module": null,
+          "level": 0,
+          "names": [
+            "json"
+          ]
+        },
+        {
+          "kind": "import",
+          "module": null,
+          "level": 0,
+          "names": [
+            "sys"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "dataclasses",
+          "level": 0,
+          "names": [
+            "dataclass"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "datetime",
+          "level": 0,
+          "names": [
+            "UTC",
+            "datetime"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "CommandTiming",
+          "lineno": 10,
+          "docstring": null
+        }
+      ],
+      "functions": [
+        {
+          "name": "emit_structured_log",
+          "lineno": 15,
+          "docstring": null,
+          "cyclomatic_complexity": 2
+        }
+      ],
+      "cyclomatic_complexity": 2,
+      "fan_in": 1,
+      "fan_out": 0
+    },
+    {
+      "path": "strucin/web/__init__.py",
+      "module_path": "strucin.web",
+      "loc": 3,
+      "size_bytes": 57,
+      "docstring": "Optional web UI package for StrucIn.",
+      "imports": [],
+      "classes": [],
+      "functions": [],
+      "cyclomatic_complexity": 1,
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    {
+      "path": "strucin/web/dashboard.py",
+      "module_path": "strucin.web.dashboard",
+      "loc": 132,
+      "size_bytes": 4738,
+      "docstring": "Web dashboard: generate static assets and optionally serve them locally.\n\nStatic assets (HTML, CSS, JavaScript) live in ``strucin/web/assets/`` and\nare loaded at runtime via ``importlib.resources``.  This keeps them lintable,\ndiffable, and independently testable \u2014 no more multi-hundred-line string\nliterals in Python source.\n\nThe dashboard data (``data.json``) is validated against a required-key schema\nbefore any file is written, so a schema violation raises ``ValueError`` early\nrather than producing a broken dashboard that fails silently in the browser.",
+      "imports": [
+        {
+          "kind": "from",
+          "module": "__future__",
+          "level": 0,
+          "names": [
+            "annotations"
+          ]
+        },
+        {
+          "kind": "import",
+          "module": null,
+          "level": 0,
+          "names": [
+            "importlib.resources"
+          ]
+        },
+        {
+          "kind": "import",
+          "module": null,
+          "level": 0,
+          "names": [
+            "json"
+          ]
+        },
+        {
+          "kind": "import",
+          "module": null,
+          "level": 0,
+          "names": [
+            "logging"
+          ]
+        },
+        {
+          "kind": "import",
+          "module": null,
+          "level": 0,
+          "names": [
+            "socket"
+          ]
+        },
+        {
+          "kind": "import",
+          "module": null,
+          "level": 0,
+          "names": [
+            "threading"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "dataclasses",
+          "level": 0,
+          "names": [
+            "asdict"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "http.server",
+          "level": 0,
+          "names": [
+            "SimpleHTTPRequestHandler",
+            "ThreadingHTTPServer"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "pathlib",
+          "level": 0,
+          "names": [
+            "Path"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.core.analyzer",
+          "level": 0,
+          "names": [
+            "AnalysisResult",
+            "analyze_repository"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.core.artifacts",
+          "level": 0,
+          "names": [
+            "build_artifact_metadata"
+          ]
+        },
+        {
+          "kind": "from",
+          "module": "strucin.exceptions",
+          "level": 0,
+          "names": [
+            "DashboardSchemaError"
+          ]
+        }
+      ],
+      "classes": [
+        {
+          "name": "DashboardHandler",
+          "lineno": 111,
+          "docstring": null
+        }
+      ],
+      "functions": [
+        {
+          "name": "_read_asset",
+          "lineno": 36,
+          "docstring": "Return the text content of a dashboard asset file.",
+          "cyclomatic_complexity": 1
+        },
+        {
+          "name": "_serialize_analysis",
+          "lineno": 46,
+          "docstring": null,
+          "cyclomatic_complexity": 1
+        },
+        {
+          "name": "_validate_data",
+          "lineno": 60,
+          "docstring": "Validate that *data* contains all fields required by ``app.js``.\n\nRaises ``ValueError`` with a descriptive message on any schema violation.\nThis guard catches bugs during development before they produce a broken\ndashboard that fails silently in the browser.",
+          "cyclomatic_complexity": 4
+        },
+        {
+          "name": "build_dashboard",
+          "lineno": 80,
+          "docstring": null,
+          "cyclomatic_complexity": 1
+        },
+        {
+          "name": "serve_dashboard",
+          "lineno": 106,
+          "docstring": null,
+          "cyclomatic_complexity": 2
+        },
+        {
+          "name": "__init__",
+          "lineno": 112,
+          "docstring": null,
+          "cyclomatic_complexity": 1
+        },
+        {
+          "name": "start_dashboard_server",
+          "lineno": 128,
+          "docstring": null,
+          "cyclomatic_complexity": 1
+        }
+      ],
+      "cyclomatic_complexity": 5,
+      "fan_in": 1,
+      "fan_out": 3
+    }
+  ],
+  "dependency_graph": {
+    "nodes": [
+      "strucin",
+      "strucin._version",
+      "strucin.cli",
+      "strucin.cli.__main__",
+      "strucin.cli.main",
+      "strucin.cli.ui",
+      "strucin.core",
+      "strucin.core.analysis_cache",
+      "strucin.core.analyzer",
+      "strucin.core.artifacts",
+      "strucin.core.config",
+      "strucin.core.diff",
+      "strucin.core.explainer",
+      "strucin.core.import_resolver",
+      "strucin.core.indexer",
+      "strucin.core.lifecycle",
+      "strucin.core.metrics",
+      "strucin.core.models",
+      "strucin.core.reporter",
+      "strucin.core.semantic",
+      "strucin.exceptions",
+      "strucin.utils",
+      "strucin.utils.logging",
+      "strucin.web",
+      "strucin.web.dashboard"
+    ],
+    "edges": [
+      {
+        "source": "strucin",
+        "target": "strucin._version"
+      },
+      {
+        "source": "strucin",
+        "target": "strucin.core.analyzer"
+      },
+      {
+        "source": "strucin",
+        "target": "strucin.core.config"
+      },
+      {
+        "source": "strucin",
+        "target": "strucin.core.explainer"
+      },
+      {
+        "source": "strucin",
+        "target": "strucin.core.semantic"
+      },
+      {
+        "source": "strucin",
+        "target": "strucin.exceptions"
+      },
+      {
+        "source": "strucin.cli.__main__",
+        "target": "strucin.cli.main"
+      },
+      {
+        "source": "strucin.cli.main",
+        "target": "strucin._version"
+      },
+      {
+        "source": "strucin.cli.main",
+        "target": "strucin.cli.ui"
+      },
+      {
+        "source": "strucin.cli.main",
+        "target": "strucin.core.analyzer"
+      },
+      {
+        "source": "strucin.cli.main",
+        "target": "strucin.core.config"
+      },
+      {
+        "source": "strucin.cli.main",
+        "target": "strucin.core.diff"
+      },
+      {
+        "source": "strucin.cli.main",
+        "target": "strucin.core.explainer"
+      },
+      {
+        "source": "strucin.cli.main",
+        "target": "strucin.core.indexer"
+      },
+      {
+        "source": "strucin.cli.main",
+        "target": "strucin.core.lifecycle"
+      },
+      {
+        "source": "strucin.cli.main",
+        "target": "strucin.core.reporter"
+      },
+      {
+        "source": "strucin.cli.main",
+        "target": "strucin.core.semantic"
+      },
+      {
+        "source": "strucin.cli.main",
+        "target": "strucin.utils.logging"
+      },
+      {
+        "source": "strucin.cli.main",
+        "target": "strucin.web.dashboard"
+      },
+      {
+        "source": "strucin.core.analysis_cache",
+        "target": "strucin.core.artifacts"
+      },
+      {
+        "source": "strucin.core.analysis_cache",
+        "target": "strucin.core.models"
+      },
+      {
+        "source": "strucin.core.analyzer",
+        "target": "strucin.core.analysis_cache"
+      },
+      {
+        "source": "strucin.core.analyzer",
+        "target": "strucin.core.artifacts"
+      },
+      {
+        "source": "strucin.core.analyzer",
+        "target": "strucin.core.import_resolver"
+      },
+      {
+        "source": "strucin.core.analyzer",
+        "target": "strucin.core.indexer"
+      },
+      {
+        "source": "strucin.core.analyzer",
+        "target": "strucin.core.metrics"
+      },
+      {
+        "source": "strucin.core.analyzer",
+        "target": "strucin.core.models"
+      },
+      {
+        "source": "strucin.core.artifacts",
+        "target": "strucin._version"
+      },
+      {
+        "source": "strucin.core.config",
+        "target": "strucin.core.indexer"
+      },
+      {
+        "source": "strucin.core.diff",
+        "target": "strucin.exceptions"
+      },
+      {
+        "source": "strucin.core.explainer",
+        "target": "strucin.core.analyzer"
+      },
+      {
+        "source": "strucin.core.explainer",
+        "target": "strucin.core.artifacts"
+      },
+      {
+        "source": "strucin.core.explainer",
+        "target": "strucin.core.config"
+      },
+      {
+        "source": "strucin.core.import_resolver",
+        "target": "strucin.core.indexer"
+      },
+      {
+        "source": "strucin.core.import_resolver",
+        "target": "strucin.core.models"
+      },
+      {
+        "source": "strucin.core.indexer",
+        "target": "strucin.core.artifacts"
+      },
+      {
+        "source": "strucin.core.metrics",
+        "target": "strucin.core.models"
+      },
+      {
+        "source": "strucin.core.reporter",
+        "target": "strucin"
+      },
+      {
+        "source": "strucin.core.reporter",
+        "target": "strucin.core.analyzer"
+      },
+      {
+        "source": "strucin.core.reporter",
+        "target": "strucin.core.config"
+      },
+      {
+        "source": "strucin.core.reporter",
+        "target": "strucin.core.explainer"
+      },
+      {
+        "source": "strucin.core.semantic",
+        "target": "strucin.core.artifacts"
+      },
+      {
+        "source": "strucin.core.semantic",
+        "target": "strucin.core.indexer"
+      },
+      {
+        "source": "strucin.web.dashboard",
+        "target": "strucin.core.analyzer"
+      },
+      {
+        "source": "strucin.web.dashboard",
+        "target": "strucin.core.artifacts"
+      },
+      {
+        "source": "strucin.web.dashboard",
+        "target": "strucin.exceptions"
+      }
+    ]
+  },
+  "cycles": []
+}

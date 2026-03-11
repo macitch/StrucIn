@@ -1,0 +1,204 @@
+name: StrucIn Architecture Analysis (Example)
+
+# ---------------------------------------------------------------------------
+# Trigger strategy
+#
+# - pull_request: runs analysis on every PR so reviewers see an up-to-date
+#   architecture report as a comment before merging.
+# - push to main: runs after merge so the report artifact is always current
+#   on the default branch (useful for dashboards, wikis, or release notes).
+# - workflow_dispatch: lets maintainers trigger a manual analysis at any time,
+#   with control over which command and path to use.
+# ---------------------------------------------------------------------------
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      # Only re-run when Python source or StrucIn config actually changes.
+      - "**.py"
+      - ".strucin.toml"
+      - "pyproject.toml"
+
+  push:
+    branches:
+      - main
+    paths:
+      - "**.py"
+      - ".strucin.toml"
+      - "pyproject.toml"
+
+  workflow_dispatch:
+    inputs:
+      path:
+        description: "Repository path to analyze (relative to workspace root)"
+        required: false
+        default: "."
+      command:
+        description: "StrucIn command: scan | analyze | report"
+        required: false
+        default: "report"
+      fail-on-cycles:
+        description: "Fail if dependency cycles are found (true | false)"
+        required: false
+        default: "false"
+
+# Limit concurrent analysis runs on the same PR to avoid race conditions on
+# the PR comment. Queued runs are cancelled; in-progress runs finish first.
+concurrency:
+  group: strucin-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Job: architecture-analysis
+  #
+  # Runs the composite StrucIn action and surfaces results as a PR comment.
+  # The job uses the minimum permissions needed: read for checkout, write for
+  # PR comments.
+  # ---------------------------------------------------------------------------
+  architecture-analysis:
+    name: Architecture Analysis
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read       # required by actions/checkout
+      pull-requests: write # required to post PR comments
+
+    steps:
+      # -----------------------------------------------------------------------
+      # 1. Check out the repository at the commit that triggered the workflow.
+      # -----------------------------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Fetch the full history so StrucIn can resolve all import paths
+          # across the module tree without shallow-clone gaps.
+          fetch-depth: 0
+
+      # -----------------------------------------------------------------------
+      # 2. Run the StrucIn composite action.
+      #
+      #    On pull_request events:
+      #      - post-comment: true   → REPORT.md is posted as a PR comment
+      #      - fail-on-cycles driven by the event input or the default 'false'
+      #
+      #    On push to main / workflow_dispatch:
+      #      - post-comment: false  → no PR to comment on; report is uploaded
+      #        as an artifact instead (the action handles this automatically)
+      # -----------------------------------------------------------------------
+      - name: Run StrucIn
+        id: strucin
+        uses: macitch/StrucIn@main
+        with:
+          path: ${{ github.event_name == 'workflow_dispatch' && inputs.path || '.' }}
+          command: ${{ github.event_name == 'workflow_dispatch' && inputs.command || 'report' }}
+          python-version: "3.12"
+          post-comment: ${{ github.event_name == 'pull_request' && 'true' || 'false' }}
+          safe-mode: "false"
+          fail-on-cycles: >-
+            ${{
+              github.event_name == 'workflow_dispatch'
+                && inputs.fail-on-cycles
+                || 'false'
+            }}
+
+      # -----------------------------------------------------------------------
+      # 3. Print a workflow summary so the result is visible in the Actions UI
+      #    regardless of the trigger (PR or push).
+      # -----------------------------------------------------------------------
+      - name: Write job summary
+        if: always()
+        shell: bash
+        run: |
+          REPORT_PATH="${{ steps.strucin.outputs.report-path }}"
+          CYCLES="${{ steps.strucin.outputs.cycles-found }}"
+
+          {
+            echo "## StrucIn Architecture Analysis"
+            echo ""
+            echo "| Field | Value |"
+            echo "|-------|-------|"
+            echo "| Command | \`${{ github.event_name == 'workflow_dispatch' && inputs.command || 'report' }}\` |"
+            echo "| Python version | \`3.12\` |"
+            echo "| Dependency cycles found | \`${CYCLES}\` |"
+            echo "| Report path | \`${REPORT_PATH}\` |"
+            echo "| Triggered by | \`${{ github.event_name }}\` |"
+            echo "| Commit | \`${{ github.sha }}\` |"
+            echo ""
+
+            if [ -f "${REPORT_PATH}" ]; then
+              echo "### Report preview"
+              echo ""
+              echo "<details>"
+              echo "<summary>Click to expand REPORT.md</summary>"
+              echo ""
+              echo '```markdown'
+              # Show first 100 lines of the report in the summary to keep it
+              # readable; the full artifact is always available for download.
+              head -n 100 "${REPORT_PATH}"
+              TOTAL=$(wc -l < "${REPORT_PATH}")
+              if [ "${TOTAL}" -gt 100 ]; then
+                echo ""
+                echo "... (${TOTAL} lines total — download the artifact for the full report)"
+              fi
+              echo '```'
+              echo ""
+              echo "</details>"
+            else
+              echo "_REPORT.md was not generated (command may have been 'scan' or 'analyze')._"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ---------------------------------------------------------------------------
+  # Job: architecture-analysis-strict
+  #
+  # An optional second job showing how to run StrucIn in "strict" mode:
+  # cycles break the build. This job is only triggered manually so teams can
+  # gate a release or enforce architectural hygiene on demand.
+  # ---------------------------------------------------------------------------
+  architecture-analysis-strict:
+    name: Architecture Analysis (strict — fail on cycles)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run StrucIn (strict mode)
+        id: strucin-strict
+        uses: macitch/StrucIn@main
+        with:
+          path: ${{ inputs.path }}
+          command: "report"
+          python-version: "3.12"
+          post-comment: "false"
+          safe-mode: "false"
+          fail-on-cycles: "true"
+
+      - name: Write strict-mode job summary
+        if: always()
+        shell: bash
+        run: |
+          CYCLES="${{ steps.strucin-strict.outputs.cycles-found }}"
+          STATUS="passed"
+          if [ "${CYCLES}" = "true" ]; then
+            STATUS="failed — cycles detected"
+          fi
+
+          {
+            echo "## StrucIn Strict Analysis"
+            echo ""
+            echo "| Field | Value |"
+            echo "|-------|-------|"
+            echo "| Cycle gate | \`${STATUS}\` |"
+            echo "| Cycles found | \`${CYCLES}\` |"
+            echo "| Report | \`${{ steps.strucin-strict.outputs.report-path }}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"

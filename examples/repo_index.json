@@ -1,0 +1,163 @@
+{
+  "artifact_metadata": {
+    "artifact_type": "repo_index",
+    "generated_at": "2026-03-11T13:54:17.238148+00:00",
+    "schema_version": "1.0",
+    "strucin_version": "0.1.0"
+  },
+  "repo_root": "/path/to/strucin/src",
+  "generated_at": "2026-03-11T13:54:17.238148+00:00",
+  "file_count": 25,
+  "files": [
+    {
+      "path": "strucin/__init__.py",
+      "module_path": "strucin",
+      "loc": 49,
+      "size_bytes": 1309
+    },
+    {
+      "path": "strucin/_version.py",
+      "module_path": "strucin._version",
+      "loc": 8,
+      "size_bytes": 278
+    },
+    {
+      "path": "strucin/cli/__init__.py",
+      "module_path": "strucin.cli",
+      "loc": 3,
+      "size_bytes": 51
+    },
+    {
+      "path": "strucin/cli/__main__.py",
+      "module_path": "strucin.cli.__main__",
+      "loc": 4,
+      "size_bytes": 80
+    },
+    {
+      "path": "strucin/cli/main.py",
+      "module_path": "strucin.cli.main",
+      "loc": 679,
+      "size_bytes": 23610
+    },
+    {
+      "path": "strucin/cli/ui.py",
+      "module_path": "strucin.cli.ui",
+      "loc": 111,
+      "size_bytes": 3122
+    },
+    {
+      "path": "strucin/core/__init__.py",
+      "module_path": "strucin.core",
+      "loc": 3,
+      "size_bytes": 54
+    },
+    {
+      "path": "strucin/core/analysis_cache.py",
+      "module_path": "strucin.core.analysis_cache",
+      "loc": 123,
+      "size_bytes": 4865
+    },
+    {
+      "path": "strucin/core/analyzer.py",
+      "module_path": "strucin.core.analyzer",
+      "loc": 334,
+      "size_bytes": 11890
+    },
+    {
+      "path": "strucin/core/artifacts.py",
+      "module_path": "strucin.core.artifacts",
+      "loc": 28,
+      "size_bytes": 727
+    },
+    {
+      "path": "strucin/core/config.py",
+      "module_path": "strucin.core.config",
+      "loc": 286,
+      "size_bytes": 8969
+    },
+    {
+      "path": "strucin/core/diff.py",
+      "module_path": "strucin.core.diff",
+      "loc": 437,
+      "size_bytes": 13562
+    },
+    {
+      "path": "strucin/core/explainer.py",
+      "module_path": "strucin.core.explainer",
+      "loc": 422,
+      "size_bytes": 15023
+    },
+    {
+      "path": "strucin/core/import_resolver.py",
+      "module_path": "strucin.core.import_resolver",
+      "loc": 151,
+      "size_bytes": 5531
+    },
+    {
+      "path": "strucin/core/indexer.py",
+      "module_path": "strucin.core.indexer",
+      "loc": 104,
+      "size_bytes": 3179
+    },
+    {
+      "path": "strucin/core/lifecycle.py",
+      "module_path": "strucin.core.lifecycle",
+      "loc": 33,
+      "size_bytes": 1126
+    },
+    {
+      "path": "strucin/core/metrics.py",
+      "module_path": "strucin.core.metrics",
+      "loc": 120,
+      "size_bytes": 4689
+    },
+    {
+      "path": "strucin/core/models.py",
+      "module_path": "strucin.core.models",
+      "loc": 76,
+      "size_bytes": 1493
+    },
+    {
+      "path": "strucin/core/reporter.py",
+      "module_path": "strucin.core.reporter",
+      "loc": 198,
+      "size_bytes": 7538
+    },
+    {
+      "path": "strucin/core/semantic.py",
+      "module_path": "strucin.core.semantic",
+      "loc": 366,
+      "size_bytes": 12442
+    },
+    {
+      "path": "strucin/exceptions.py",
+      "module_path": "strucin.exceptions",
+      "loc": 42,
+      "size_bytes": 1037
+    },
+    {
+      "path": "strucin/utils/__init__.py",
+      "module_path": "strucin.utils",
+      "loc": 1,
+      "size_bytes": 35
+    },
+    {
+      "path": "strucin/utils/logging.py",
+      "module_path": "strucin.utils.logging",
+      "loc": 23,
+      "size_bytes": 520
+    },
+    {
+      "path": "strucin/web/__init__.py",
+      "module_path": "strucin.web",
+      "loc": 3,
+      "size_bytes": 57
+    },
+    {
+      "path": "strucin/web/dashboard.py",
+      "module_path": "strucin.web.dashboard",
+      "loc": 132,
+      "size_bytes": 4738
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+- id: strucin-cycles
+  name: StrucIn dependency cycle check
+  entry: strucin-check-cycles
+  language: python
+  types: [python]
+  pass_filenames: false
+  always_run: true
+
+- id: strucin-complexity
+  name: StrucIn complexity check
+  entry: strucin-check-complexity
+  language: python
+  types: [python]
+  pass_filenames: false
+  always_run: true
+  args: ['--threshold', '15']

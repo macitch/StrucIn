@@ -1,0 +1,43 @@
+# OS
+.DS_Store
+
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+
+# Tool caches
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Coverage and test artifacts
+.coverage
+.coverage.*
+htmlcov/
+
+# Build and packaging
+build/
+dist/
+*.egg-info/
+
+# IDE/editor
+.vscode/
+.idea/
+
+# StrucIn generated artifacts
+.strucin_cache/
+.strucin_web/
+/repo_index.json
+/analysis.json
+/dependency_graph.json
+/semantic_index.json
+/explain.json
+
+# StrucIn generated docs 
+/docs/

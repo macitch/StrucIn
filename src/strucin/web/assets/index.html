@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>StrucIn Dashboard</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <h1>StrucIn Interactive Dashboard</h1>
+      <p id="summary"></p>
+    </header>
+    <main class="layout">
+      <section class="panel graph-panel">
+        <div class="panel-title">
+          <h2>Dependency Graph</h2>
+          <input id="nodeFilter" type="text" placeholder="Filter module..." />
+        </div>
+        <svg id="graph" viewBox="0 0 960 640" role="img" aria-label="Dependency graph"></svg>
+      </section>
+      <section class="panel detail-panel">
+        <h2>Module Details</h2>
+        <div id="details">
+          <p>Select a module in the graph or list.</p>
+        </div>
+        <h3>Modules</h3>
+        <ul id="moduleList"></ul>
+      </section>
+    </main>
+    <script src="./app.js"></script>
+  </body>
+</html>
