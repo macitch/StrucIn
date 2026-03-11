@@ -54,7 +54,7 @@ runs:
       shell: bash
       run: |
         python -m pip install --upgrade pip
-        pip install strucin
+        pip install "${{ github.action_path }}"
 
     # -------------------------------------------------------------------------
     # 3. Resolve absolute paths for outputs before the run so later steps can
@@ -74,7 +74,7 @@ runs:
           TARGET_PATH="$(realpath "$TARGET_PATH")"
         fi
 
-        REPORT_PATH="${TARGET_PATH}/REPORT.md"
+        REPORT_PATH="${TARGET_PATH}/docs/REPORT.md"
         ANALYSIS_PATH="${TARGET_PATH}/analysis.json"
 
         echo "target-path=${TARGET_PATH}"    >> "$GITHUB_OUTPUT"
