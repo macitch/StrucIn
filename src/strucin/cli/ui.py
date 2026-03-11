@@ -97,7 +97,7 @@ def format_table(headers: list[str], rows: list[list[str]]) -> str:
         con = _get_console()
         with con.capture() as capture:
             con.print(table)
-        return capture.get().rstrip()
+        return str(capture.get()).rstrip()
 
     all_rows = [headers, *rows]
     widths = [max(len(row[index]) for row in all_rows) for index in range(len(headers))]

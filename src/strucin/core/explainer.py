@@ -231,7 +231,8 @@ def _call_llm(context: str, provider: str, model: str) -> str | None:
                 system=_LLM_SYSTEM_PROMPT,
                 messages=[{"role": "user", "content": user_content}],
             )
-            return str(msg.content[0].text)
+            block = msg.content[0]
+            return str(getattr(block, "text", ""))
         if provider == "openai":
             import openai
 

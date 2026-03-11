@@ -210,12 +210,14 @@ def test_search_semantic_index_raises_on_dimension_mismatch(tmp_path: Path) -> N
     assert index.dimensions == 3
 
     # Patch _embed_texts to return 4-dimensional query vector
-    with patch(
-        "strucin.core.semantic._embed_texts",
-        return_value=([[0.1, 0.2, 0.3, 0.4]], 4, "test-model"),
+    with (
+        patch(
+            "strucin.core.semantic._embed_texts",
+            return_value=([[0.1, 0.2, 0.3, 0.4]], 4, "test-model"),
+        ),
+        pytest.raises(ValueError, match="4 dimensions"),
     ):
-        with pytest.raises(ValueError, match="4 dimensions"):
-            search_semantic_index(index, "foo", top_k=3)
+        search_semantic_index(index, "foo", top_k=3)
 
 
 def test_search_uses_same_model_as_index(tmp_path: Path) -> None:

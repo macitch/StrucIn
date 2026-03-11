@@ -169,7 +169,7 @@ def test_as_filename_strips_absolute_path(
 ) -> None:
     """_as_filename warns and returns only the basename for absolute paths."""
     with caplog.at_level(logging.WARNING, logger="strucin.core.config"):
-        result = _as_filename("/tmp/analysis.json", "analysis.json")
+        result = _as_filename("/abs/path/analysis.json", "analysis.json")
     assert result == "analysis.json"
     assert "absolute" in caplog.text
 

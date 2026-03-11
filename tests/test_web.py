@@ -83,9 +83,11 @@ def test_build_dashboard_raises_before_writing_on_schema_violation(tmp_path: Pat
 
     # Patch _serialize_analysis to return data missing all required list keys.
     bad_data: dict[str, object] = {"file_count": 1}
-    with patch("strucin.web.dashboard._serialize_analysis", return_value=bad_data):
-        with pytest.raises(DashboardSchemaError, match="missing required fields"):
-            build_dashboard(tmp_path, output_dir)
+    with (
+        patch("strucin.web.dashboard._serialize_analysis", return_value=bad_data),
+        pytest.raises(DashboardSchemaError, match="missing required fields"),
+    ):
+        build_dashboard(tmp_path, output_dir)
 
     assert not output_dir.exists(), "output_dir should not be created when validation fails"
 

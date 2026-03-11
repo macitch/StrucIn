@@ -58,13 +58,13 @@ def detect_cycles(nodes: list[str], adjacency: dict[str, set[str]]) -> list[list
         # work_stack entries: (node, neighbour_iterator)
         work_stack: list[tuple[str, object]] = []
 
-        def _push(node: str) -> None:  # noqa: B023
+        def _push(node: str, _ws: list[tuple[str, object]] = work_stack) -> None:
             index_map[node] = index_counter[0]
             lowlink[node] = index_counter[0]
             index_counter[0] += 1
             scc_stack.append(node)
             on_scc_stack.add(node)
-            work_stack.append((node, iter(sorted(adjacency.get(node, set())))))
+            _ws.append((node, iter(sorted(adjacency.get(node, set())))))
 
         _push(start)
 
