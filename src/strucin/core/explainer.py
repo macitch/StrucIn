@@ -4,6 +4,7 @@ import hashlib
 import json
 import logging
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass
 from dataclasses import replace as dc_replace
 from datetime import UTC, datetime
@@ -11,13 +12,14 @@ from pathlib import Path
 from typing import cast
 
 from strucin.core.analyzer import AnalysisResult, FileAnalysis, analyze_repository
-from strucin.core.artifacts import build_artifact_metadata
+from strucin.core.artifacts import build_artifact_metadata, resolve_artifact_path
 from strucin.core.config import LLMConfig
+from strucin.core.privacy import anonymize_analysis, redact_identifiers
 
 _logger = logging.getLogger(__name__)
 
 #: Bump when the explain cache schema or key format changes to force re-generation.
-CACHE_VERSION = "1"
+CACHE_VERSION = "2"
 
 MAX_CONTEXT_CHARS = 12_000
 MAX_SUMMARY_FILES = 8
@@ -66,9 +68,18 @@ def redact_analysis(analysis: AnalysisResult) -> AnalysisResult:
     to :class:`FileAnalysis` are automatically carried through.
     """
     redacted_files = [
-        dc_replace(file_info, docstring=_redact_text(file_info.docstring))
-        if file_info.docstring
-        else file_info
+        dc_replace(
+            file_info,
+            docstring=_redact_text(file_info.docstring) if file_info.docstring else None,
+            classes=[
+                dc_replace(item, docstring=_redact_text(item.docstring)) if item.docstring else item
+                for item in file_info.classes
+            ],
+            functions=[
+                dc_replace(item, docstring=_redact_text(item.docstring)) if item.docstring else item
+                for item in file_info.functions
+            ],
+        )
         for file_info in analysis.files
     ]
     return dc_replace(analysis, files=redacted_files)
@@ -333,7 +344,10 @@ def _load_cache(cache_path: Path) -> dict[str, dict[str, str]]:
     """
     if not cache_path.exists():
         return {}
-    parsed = json.loads(cache_path.read_text(encoding="utf-8"))
+    try:
+        parsed = json.loads(cache_path.read_text(encoding="utf-8"))
+    except (ValueError, UnicodeError):
+        return {}
     if not isinstance(parsed, dict) or parsed.get("cache_version") != CACHE_VERSION:
         return {}
     entries = parsed.get("entries", {})
@@ -363,38 +377,51 @@ def explain_repository(
     max_workers: int | None = None,
     executor: str = "auto",
     llm_config: LLMConfig | None = None,
+    *,
+    source_roots: Sequence[str] | None = None,
 ) -> ExplainOutput:
+    cache_name = "explain_safe_cache.json" if safe_mode else "explain_cache.json"
+    cache_path = resolve_artifact_path(repo_path, f".strucin_cache/{cache_name}")
     analysis = analyze_repository(
         repo_path,
         excluded_dirs=excluded_dirs,
         max_workers=max_workers,
         executor=executor,
+        use_cache=not safe_mode,
+        source_roots=source_roots,
     )
-    redacted = redact_analysis(analysis)
+    redacted = anonymize_analysis(analysis) if safe_mode else redact_analysis(analysis)
     llm_info = _detect_llm(llm_config) if llm_config is not None else None
     llm_tag = f"{llm_info[0]}:{llm_info[1]}" if llm_info else "template"
+    if safe_mode:
+        llm_tag = hashlib.sha256(llm_tag.encode("utf-8")).hexdigest()
     cache_key = f"safe_mode={safe_mode}:llm={llm_tag}:{_cache_key_from_analysis(redacted)}"
-    root = Path(redacted.repo_root)
-    cache_path = root / ".strucin_cache" / "explain_cache.json"
     cache = _load_cache(cache_path)
-
-    if not refresh and cache_key in cache:
-        cached = cache[cache_key]
+    cached = cache.get(cache_key) if not refresh else None
+    content = None
+    generated_at = datetime.now(UTC).isoformat()
+    if isinstance(cached, dict) and isinstance(cached.get("content"), str):
+        try:
+            # Validate before copying cache metadata into a shareable artifact.
+            generated_at = datetime.fromisoformat(cached["generated_at"]).isoformat()
+            content = cached["content"]
+        except (KeyError, TypeError, ValueError):
+            pass
+    if content is not None and not safe_mode:
         return ExplainOutput(
             repo_root=redacted.repo_root,
-            generated_at=cached["generated_at"],
+            generated_at=generated_at,
             cache_key=cache_key,
-            content=cached["content"],
+            content=content,
         )
-
-    if llm_info:
-        context = _limited_context(redacted)
-        content = _call_llm(context, llm_info[0], llm_info[1]) or generate_explanation(
-            redacted, safe_mode=safe_mode
-        )
-    else:
-        content = generate_explanation(redacted, safe_mode=safe_mode)
-    generated_at = datetime.now(UTC).isoformat()
+    if content is None:
+        if llm_info:
+            content = _call_llm(_limited_context(redacted), llm_info[0], llm_info[1])
+        content = content or generate_explanation(redacted, safe_mode=safe_mode)
+    if safe_mode:
+        content = _redact_text(redact_identifiers(content, analysis))
+        # Never carry unrelated entries or arbitrary cached metadata into a safe cache.
+        cache = {}
     cache[cache_key] = {"generated_at": generated_at, "content": content}
     _write_cache(cache_path, cache)
     return ExplainOutput(

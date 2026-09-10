@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Confine configured artifacts, automatic caches, and cleanup to the selected output directory.
+- Apply safe mode across generated artifacts, search results, dashboards, LLM context, and caches.
+- Resolve Python import names from source roots and packaging metadata so src layouts produce correct dependency graphs and cycle checks.
+- Use fresh analysis for every GitHub Action command and cycle gate, honor configured output paths, and preserve reports when strict cycle checks fail.
+- Skip external, broken, looping, and non-regular source/document links; revalidate reads and rebuild older search indexes under the new file policy.
+
 ## [0.1.0] - 2025-02-25
 
 ### Added

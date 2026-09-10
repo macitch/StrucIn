@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import logging
 import tomllib
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from os import cpu_count
 from pathlib import Path
 from typing import Any, cast
 
+from strucin.core.artifacts import resolve_artifact_path
 from strucin.core.indexer import EXCLUDED_DIRS
+from strucin.core.source_roots import parse_source_roots
 
 _logger = logging.getLogger(__name__)
 
@@ -79,6 +81,7 @@ class StrucInConfig:
     observability: ObservabilityConfig
     llm: LLMConfig
     report: ReportConfig
+    source_roots: tuple[str, ...] | None = None
 
 
 def default_config() -> StrucInConfig:
@@ -98,13 +101,13 @@ def default_config() -> StrucInConfig:
 def load_config(repo_root: Path) -> StrucInConfig:
     config_path = repo_root / ".strucin.toml"
     if not config_path.exists():
-        return default_config()
+        return _validate_output_paths(repo_root, default_config())
 
     try:
         raw = tomllib.loads(config_path.read_text(encoding="utf-8"))
     except tomllib.TOMLDecodeError as exc:
         _logger.warning(".strucin.toml is invalid TOML: %s", exc)
-        return default_config()
+        return _validate_output_paths(repo_root, default_config())
     base = default_config()
 
     scan_table = _as_table(raw.get("scan"))
@@ -196,8 +199,11 @@ def load_config(repo_root: Path) -> StrucInConfig:
         fallback=base.report.loc_threshold,
         minimum=1,
     )
-    return StrucInConfig(
+    config = StrucInConfig(
         excluded_dirs=excluded_dirs,
+        source_roots=parse_source_roots(scan_table["source_roots"])
+        if "source_roots" in scan_table
+        else None,
         output=output,
         search=SearchConfig(top_k=top_k, dimensions=dimensions, embedding_model=embedding_model),
         performance=PerformanceConfig(max_workers=max_workers, executor=executor),
@@ -214,6 +220,15 @@ def load_config(repo_root: Path) -> StrucInConfig:
             loc_threshold=loc_threshold,
         ),
     )
+    return _validate_output_paths(repo_root, config)
+
+
+def _validate_output_paths(repo_root: Path, config: StrucInConfig) -> StrucInConfig:
+    # Check every destination before lifecycle cleanup can remove any files,
+    # including defaults when no config file exists or TOML parsing falls back.
+    for field in fields(config.output):
+        resolve_artifact_path(repo_root, getattr(config.output, field.name))
+    return config
 
 
 def _parse_str_list(value: object, fallback: set[str]) -> set[str]:

@@ -74,6 +74,7 @@ max-complexity = 12
 
 [tool.ruff.lint.per-file-ignores]
 "src/strucin/cli/main.py" = ["T201"]
+"src/strucin/cli/action.py" = ["T201"]
 "src/strucin/cli/ui.py" = ["T201"]
 "src/strucin/cli/hooks.py" = ["T201"]
 "src/strucin/utils/logging.py" = ["T201"]

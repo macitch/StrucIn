@@ -4,23 +4,29 @@ import argparse
 import json
 import logging
 import traceback
+from collections.abc import Sequence
+from dataclasses import replace
 from pathlib import Path
 from time import perf_counter
 
 from strucin._version import __version__
 from strucin.cli.ui import format_table, print_error, print_progress, print_success
 from strucin.core.analyzer import analyze_repository, write_analysis
+from strucin.core.artifacts import resolve_artifact_path
 from strucin.core.config import StrucInConfig, load_config
 from strucin.core.explainer import explain_repository, write_explain_metadata, write_explanation
 from strucin.core.indexer import scan_repository, write_repo_index
 from strucin.core.lifecycle import cleanup_stale_artifacts
+from strucin.core.privacy import REDACTED_REPOSITORY, anonymize_diff, anonymize_hits
 from strucin.core.reporter import write_markdown_report
 from strucin.core.semantic import (
     build_semantic_index,
     load_semantic_index,
     search_semantic_index,
+    semantic_index_matches_source_roots,
     write_semantic_index,
 )
+from strucin.exceptions import StrucInError
 from strucin.utils.logging import CommandTiming, emit_structured_log
 from strucin.web.dashboard import build_dashboard, serve_dashboard
 
@@ -31,6 +37,7 @@ _INIT_TEMPLATE = """\
 [scan]
 # Additional directories to exclude (core exclusions like .git are always applied)
 # exclude_dirs = ["docs", "scripts"]
+# source_roots = ["src"]  # Override packaging metadata / automatic detection
 
 [search]
 # top_k = 5
@@ -188,6 +195,28 @@ def build_parser() -> argparse.ArgumentParser:
     web_parser.add_argument("--host", default="127.0.0.1", help="Host to bind local web server")
     web_parser.add_argument("--port", type=int, default=8765, help="Port to bind local web server")
 
+    for command_parser in (scan_parser, analyze_parser, search_parser, web_parser, diff_parser):
+        command_parser.add_argument(
+            "--safe-mode",
+            action=argparse.BooleanOptionalAction,
+            default=None,
+            help="Anonymize output and avoid persisting source text",
+        )
+    for command_parser in (
+        scan_parser,
+        analyze_parser,
+        report_parser,
+        explain_parser,
+        search_parser,
+        web_parser,
+    ):
+        command_parser.add_argument(
+            "--source-root",
+            dest="source_roots",
+            action="append",
+            metavar="DIR",
+            help="Repository-relative import root; repeat for multiple roots (overrides config)",
+        )
     return parser
 
 
@@ -204,20 +233,52 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "init":
             return _run_init(args.path, args.force)
         if args.command == "scan":
-            return _run_scan(args.path, json_output=args.json_output)
+            return _run_scan(
+                args.path,
+                json_output=args.json_output,
+                safe_mode_override=args.safe_mode,
+                source_roots_override=args.source_roots,
+            )
         if args.command == "analyze":
-            return _run_analyze(args.path, json_output=args.json_output)
+            return _run_analyze(
+                args.path,
+                json_output=args.json_output,
+                safe_mode_override=args.safe_mode,
+                source_roots_override=args.source_roots,
+            )
         if args.command == "report":
-            return _run_report(args.path, args.safe_mode)
+            return _run_report(args.path, args.safe_mode, source_roots_override=args.source_roots)
         if args.command == "search":
-            return _run_search(args.path, args.query, args.top_k, json_output=args.json_output)
+            return _run_search(
+                args.path,
+                args.query,
+                args.top_k,
+                json_output=args.json_output,
+                safe_mode_override=args.safe_mode,
+                source_roots_override=args.source_roots,
+            )
         if args.command == "explain":
-            return _run_explain(args.path, args.refresh, args.safe_mode)
+            return _run_explain(
+                args.path, args.refresh, args.safe_mode, source_roots_override=args.source_roots
+            )
         if args.command == "diff":
-            return _run_diff(args.before, args.after, json_output=args.json_output)
+            return _run_diff(
+                args.before,
+                args.after,
+                json_output=args.json_output,
+                safe_mode=bool(args.safe_mode),
+            )
         if args.command == "web":
-            return _run_web(args.path, args.out, args.serve, args.host, args.port)
-    except (PermissionError, FileNotFoundError, ValueError) as exc:
+            return _run_web(
+                args.path,
+                args.out,
+                args.serve,
+                args.host,
+                args.port,
+                safe_mode_override=args.safe_mode,
+                source_roots_override=args.source_roots,
+            )
+    except (StrucInError, PermissionError, FileNotFoundError, ValueError) as exc:
         print_error(str(exc))
         return 1
     except Exception as exc:  # pragma: no cover - defensive fallback
@@ -239,8 +300,23 @@ def _validate_repo_path(target_path: Path) -> bool:
     return True
 
 
-def _resolve_config(target_path: Path) -> StrucInConfig:
-    return load_config(target_path)
+def _resolve_config(
+    target_path: Path,
+    safe_mode_override: bool | None = None,
+    source_roots_override: Sequence[str] | None = None,
+) -> StrucInConfig:
+    config = load_config(target_path)
+    return replace(
+        config,
+        security=replace(config.security, safe_mode=_resolve_safe_mode(config, safe_mode_override)),
+        source_roots=tuple(source_roots_override)
+        if source_roots_override is not None
+        else config.source_roots,
+    )
+
+
+def _display(value: object, config: StrucInConfig) -> str:
+    return "[REDACTED]" if config.security.safe_mode else str(value)
 
 
 # ---------------------------------------------------------------------------
@@ -250,7 +326,7 @@ def _resolve_config(target_path: Path) -> StrucInConfig:
 
 def _run_init(path: Path, force: bool) -> int:
     target_path = path.resolve()
-    config_path = target_path / ".strucin.toml"
+    config_path = resolve_artifact_path(target_path, ".strucin.toml")
     if config_path.exists() and not force:
         print_error(f"{config_path} already exists. Use --force to overwrite.")
         return 1
@@ -264,12 +340,18 @@ def _run_init(path: Path, force: bool) -> int:
 # ---------------------------------------------------------------------------
 
 
-def _run_scan(path: Path, *, json_output: bool = False) -> int:
+def _run_scan(
+    path: Path,
+    *,
+    json_output: bool = False,
+    safe_mode_override: bool | None = None,
+    source_roots_override: Sequence[str] | None = None,
+) -> int:
     timings: list[CommandTiming] = []
     target_path = path.resolve()
     if not _validate_repo_path(target_path):
         return 1
-    config = _resolve_config(target_path)
+    config = _resolve_config(target_path, safe_mode_override, source_roots_override)
     _run_lifecycle_cleanup(target_path, config)
 
     print_progress(1, 2, "Scanning repository files")
@@ -278,22 +360,23 @@ def _run_scan(path: Path, *, json_output: bool = False) -> int:
         target_path,
         excluded_dirs=config.excluded_dirs,
         max_workers=config.performance.max_workers,
+        source_roots=config.source_roots,
     )
     _record_timing(timings, "scan_repository", started)
     print_progress(2, 2, "Writing repository index")
-    output_path = target_path / config.output.repo_index
+    output_path = resolve_artifact_path(target_path, config.output.repo_index)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     started = perf_counter()
-    write_repo_index(repo_index, output_path)
+    write_repo_index(repo_index, output_path, safe_mode=config.security.safe_mode)
     _record_timing(timings, "write_repo_index", started)
 
     if json_output:
         print(
             json.dumps(
                 {
-                    "repo_root": str(target_path),
+                    "repo_root": _display(target_path, config),
                     "file_count": repo_index.file_count,
-                    "output": str(output_path),
+                    "output": _display(output_path, config),
                 },
                 indent=2,
             )
@@ -303,9 +386,9 @@ def _run_scan(path: Path, *, json_output: bool = False) -> int:
         table = format_table(
             headers=["Metric", "Value"],
             rows=[
-                ["Repo Root", str(target_path)],
-                ["Output", str(output_path)],
-                ["Excluded Dirs", ", ".join(sorted(config.excluded_dirs))],
+                ["Repo Root", _display(target_path, config)],
+                ["Output", _display(output_path, config)],
+                ["Excluded Dirs", _display(", ".join(sorted(config.excluded_dirs)), config)],
                 ["Workers", str(config.performance.max_workers)],
             ],
         )
@@ -319,12 +402,18 @@ def _run_scan(path: Path, *, json_output: bool = False) -> int:
 # ---------------------------------------------------------------------------
 
 
-def _run_analyze(path: Path, *, json_output: bool = False) -> int:
+def _run_analyze(
+    path: Path,
+    *,
+    json_output: bool = False,
+    safe_mode_override: bool | None = None,
+    source_roots_override: Sequence[str] | None = None,
+) -> int:
     timings: list[CommandTiming] = []
     target_path = path.resolve()
     if not _validate_repo_path(target_path):
         return 1
-    config = _resolve_config(target_path)
+    config = _resolve_config(target_path, safe_mode_override, source_roots_override)
     _run_lifecycle_cleanup(target_path, config)
 
     print_progress(1, 2, "Running AST analysis")
@@ -333,15 +422,19 @@ def _run_analyze(path: Path, *, json_output: bool = False) -> int:
         target_path,
         excluded_dirs=config.excluded_dirs,
         max_workers=config.performance.max_workers,
+        source_roots=config.source_roots,
         executor=config.performance.executor,
+        use_cache=not config.security.safe_mode,
     )
     _record_timing(timings, "analyze_repository", started)
-    analysis_path = target_path / config.output.analysis
-    dependency_graph_path = target_path / config.output.dependency_graph
+    analysis_path = resolve_artifact_path(target_path, config.output.analysis)
+    dependency_graph_path = resolve_artifact_path(target_path, config.output.dependency_graph)
     analysis_path.parent.mkdir(parents=True, exist_ok=True)
     print_progress(2, 2, "Writing analysis artifacts")
     started = perf_counter()
-    write_analysis(analysis, analysis_path, dependency_graph_path)
+    write_analysis(
+        analysis, analysis_path, dependency_graph_path, safe_mode=config.security.safe_mode
+    )
     _record_timing(timings, "write_analysis", started)
 
     if json_output:
@@ -352,8 +445,8 @@ def _run_analyze(path: Path, *, json_output: bool = False) -> int:
                     "module_count": analysis.module_count,
                     "dependency_edges": len(analysis.dependency_graph_edges),
                     "cycles": len(analysis.cycles),
-                    "analysis_path": str(analysis_path),
-                    "dependency_graph_path": str(dependency_graph_path),
+                    "analysis_path": _display(analysis_path, config),
+                    "dependency_graph_path": _display(dependency_graph_path, config),
                 },
                 indent=2,
             )
@@ -370,8 +463,8 @@ def _run_analyze(path: Path, *, json_output: bool = False) -> int:
             ],
         )
         print(table)
-        print(f"Analysis file: {analysis_path}")
-        print(f"Dependency graph: {dependency_graph_path}")
+        print(f"Analysis file: {_display(analysis_path, config)}")
+        print(f"Dependency graph: {_display(dependency_graph_path, config)}")
     _emit_command_summary("analyze", target_path, timings, config)
     return 0
 
@@ -381,12 +474,17 @@ def _run_analyze(path: Path, *, json_output: bool = False) -> int:
 # ---------------------------------------------------------------------------
 
 
-def _run_report(path: Path, safe_mode_override: bool | None) -> int:
+def _run_report(
+    path: Path,
+    safe_mode_override: bool | None,
+    *,
+    source_roots_override: Sequence[str] | None = None,
+) -> int:
     timings: list[CommandTiming] = []
     target_path = path.resolve()
     if not _validate_repo_path(target_path):
         return 1
-    config = _resolve_config(target_path)
+    config = _resolve_config(target_path, safe_mode_override, source_roots_override)
     _run_lifecycle_cleanup(target_path, config)
     safe_mode = _resolve_safe_mode(config, safe_mode_override)
 
@@ -396,17 +494,19 @@ def _run_report(path: Path, safe_mode_override: bool | None) -> int:
         target_path,
         excluded_dirs=config.excluded_dirs,
         max_workers=config.performance.max_workers,
+        source_roots=config.source_roots,
         executor=config.performance.executor,
+        use_cache=not config.security.safe_mode,
     )
     _record_timing(timings, "analyze_repository", started)
     print_progress(2, 2, "Rendering markdown report")
-    output_path = target_path / config.output.report
+    output_path = resolve_artifact_path(target_path, config.output.report)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     started = perf_counter()
     write_markdown_report(analysis, output_path, safe_mode=safe_mode, report_config=config.report)
     _record_timing(timings, "write_report", started)
     print(f"Generated report for {analysis.file_count} Python files.")
-    print(f"Wrote report to {output_path}")
+    print(f"Wrote report to {_display(output_path, config)}")
     _emit_command_summary("report", target_path, timings, config, {"safe_mode": safe_mode})
     return 0
 
@@ -416,40 +516,61 @@ def _run_report(path: Path, safe_mode_override: bool | None) -> int:
 # ---------------------------------------------------------------------------
 
 
-def _run_search(path: Path, query: str, top_k: int, *, json_output: bool = False) -> int:
+def _run_search(
+    path: Path,
+    query: str,
+    top_k: int,
+    *,
+    json_output: bool = False,
+    safe_mode_override: bool | None = None,
+    source_roots_override: Sequence[str] | None = None,
+) -> int:
     timings: list[CommandTiming] = []
     target_path = path.resolve()
     if not _validate_repo_path(target_path):
         return 1
-    config = _resolve_config(target_path)
+    config = _resolve_config(target_path, safe_mode_override, source_roots_override)
     _run_lifecycle_cleanup(target_path, config)
 
     requested_top_k = top_k if top_k > 0 else config.search.top_k
     dimensions = config.search.dimensions
-    index_path = target_path / config.output.semantic_index
+    index_path = resolve_artifact_path(target_path, config.output.semantic_index)
     index_path.parent.mkdir(parents=True, exist_ok=True)
 
     print_progress(1, 2, "Loading semantic index")
     started = perf_counter()
-    if index_path.exists():
-        semantic_index = load_semantic_index(index_path)
-    else:
+    semantic_index = (
+        load_semantic_index(index_path)
+        if index_path.exists() and not config.security.safe_mode
+        else None
+    )
+    if semantic_index is None or not semantic_index_matches_source_roots(
+        semantic_index, target_path, config.source_roots
+    ):
         semantic_index = build_semantic_index(
             target_path,
             dimensions=dimensions,
             embedding_model=config.search.embedding_model,
             excluded_dirs=config.excluded_dirs,
             max_workers=config.performance.max_workers,
+            source_roots=config.source_roots,
         )
-        write_semantic_index(semantic_index, index_path)
+        if not config.security.safe_mode:
+            write_semantic_index(semantic_index, index_path)
         if not json_output:
-            print(f"Built semantic index with {semantic_index.chunk_count} chunks at {index_path}")
+            print(
+                f"Built semantic index with {semantic_index.chunk_count} chunks"
+                + (" in memory." if config.security.safe_mode else f" at {index_path}")
+            )
     _record_timing(timings, "load_or_build_semantic_index", started)
 
     print_progress(2, 2, "Executing semantic query")
     started = perf_counter()
     hits = search_semantic_index(semantic_index, query, top_k=requested_top_k)
     _record_timing(timings, "search_semantic_index", started)
+    if config.security.safe_mode:
+        hits = anonymize_hits(hits, semantic_index)
+        query = "[REDACTED_QUERY]"
 
     if json_output:
         results = [
@@ -503,12 +624,18 @@ def _run_search(path: Path, query: str, top_k: int, *, json_output: bool = False
 # ---------------------------------------------------------------------------
 
 
-def _run_explain(path: Path, refresh: bool, safe_mode_override: bool | None) -> int:
+def _run_explain(
+    path: Path,
+    refresh: bool,
+    safe_mode_override: bool | None,
+    *,
+    source_roots_override: Sequence[str] | None = None,
+) -> int:
     timings: list[CommandTiming] = []
     target_path = path.resolve()
     if not _validate_repo_path(target_path):
         return 1
-    config = _resolve_config(target_path)
+    config = _resolve_config(target_path, safe_mode_override, source_roots_override)
     _run_lifecycle_cleanup(target_path, config)
     safe_mode = _resolve_safe_mode(config, safe_mode_override)
 
@@ -520,19 +647,21 @@ def _run_explain(path: Path, refresh: bool, safe_mode_override: bool | None) -> 
         safe_mode=safe_mode,
         excluded_dirs=config.excluded_dirs,
         max_workers=config.performance.max_workers,
+        source_roots=config.source_roots,
+        executor=config.performance.executor,
         llm_config=config.llm,
     )
     _record_timing(timings, "explain_repository", started)
-    explain_path = target_path / config.output.explain_markdown
-    metadata_path = target_path / config.output.explain_metadata
+    explain_path = resolve_artifact_path(target_path, config.output.explain_markdown)
+    metadata_path = resolve_artifact_path(target_path, config.output.explain_metadata)
     explain_path.parent.mkdir(parents=True, exist_ok=True)
     print_progress(2, 2, "Writing narration artifacts")
     started = perf_counter()
     write_explanation(explanation, explain_path)
     write_explain_metadata(explanation, metadata_path)
     _record_timing(timings, "write_explain_artifacts", started)
-    print(f"Generated architecture narration at {explain_path}")
-    print(f"Wrote explanation metadata to {metadata_path}")
+    print(f"Generated architecture narration at {_display(explain_path, config)}")
+    print(f"Wrote explanation metadata to {_display(metadata_path, config)}")
     _emit_command_summary(
         "explain",
         target_path,
@@ -548,7 +677,9 @@ def _run_explain(path: Path, refresh: bool, safe_mode_override: bool | None) -> 
 # ---------------------------------------------------------------------------
 
 
-def _run_diff(before: Path, after: Path, *, json_output: bool = False) -> int:
+def _run_diff(
+    before: Path, after: Path, *, json_output: bool = False, safe_mode: bool = False
+) -> int:
     from strucin.core.diff import diff_analyses, render_diff_json, render_diff_markdown
 
     before_path = before.resolve()
@@ -559,6 +690,8 @@ def _run_diff(before: Path, after: Path, *, json_output: bool = False) -> int:
             return 1
 
     result = diff_analyses(before_path, after_path)
+    if safe_mode:
+        result = anonymize_diff(result)
     if json_output:
         print(render_diff_json(result))
     else:
@@ -571,7 +704,16 @@ def _run_diff(before: Path, after: Path, *, json_output: bool = False) -> int:
 # ---------------------------------------------------------------------------
 
 
-def _run_web(path: Path, out: Path | None, serve: bool, host: str, port: int) -> int:
+def _run_web(
+    path: Path,
+    out: Path | None,
+    serve: bool,
+    host: str,
+    port: int,
+    *,
+    safe_mode_override: bool | None = None,
+    source_roots_override: Sequence[str] | None = None,
+) -> int:
     timings: list[CommandTiming] = []
     target_path = path.resolve()
     if not _validate_repo_path(target_path):
@@ -579,9 +721,11 @@ def _run_web(path: Path, out: Path | None, serve: bool, host: str, port: int) ->
     if port <= 0 or port > 65535:
         raise ValueError(f"Port out of range: {port}")
 
-    config = _resolve_config(target_path)
+    config = _resolve_config(target_path, safe_mode_override, source_roots_override)
     _run_lifecycle_cleanup(target_path, config)
-    output_dir = out.resolve() if out is not None else target_path / ".strucin_web"
+    output_dir = (
+        out.resolve() if out is not None else resolve_artifact_path(target_path, ".strucin_web")
+    )
 
     print_progress(1, 2, "Building web dashboard artifacts")
     started = perf_counter()
@@ -590,11 +734,13 @@ def _run_web(path: Path, out: Path | None, serve: bool, host: str, port: int) ->
         output_dir,
         excluded_dirs=config.excluded_dirs,
         max_workers=config.performance.max_workers,
+        source_roots=config.source_roots,
         executor=config.performance.executor,
+        safe_mode=config.security.safe_mode,
     )
     _record_timing(timings, "build_dashboard", started)
     print_progress(2, 2, "Dashboard build complete")
-    print(f"Dashboard generated at {html_path}")
+    print(f"Dashboard generated at {_display(html_path, config)}")
 
     if not serve:
         print("Tip: run with --serve to start a local server.")
@@ -671,7 +817,7 @@ def _emit_command_summary(
 
     payload: dict[str, object] = {
         "command": command,
-        "repo_root": str(repo_root),
+        "repo_root": REDACTED_REPOSITORY if config.security.safe_mode else str(repo_root),
         "total_ms": round(total_ms, 3),
         "bottleneck_stage": bottleneck.stage,
         "bottleneck_ms": round(bottleneck.duration_ms, 3),
