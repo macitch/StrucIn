@@ -85,10 +85,19 @@ def test_allow_symlinked_repo_root_and_internal_parent(tmp_path: Path) -> None:
     assert resolve_artifact_path(alias, "docs/report.md") == repo / "reports/report.md"
 
 
-def test_reject_symlink_loop_with_config_error(tmp_path: Path) -> None:
+@pytest.mark.parametrize("path", ["loop", "loop/report.md", "alias", "alias/nested/report.md"])
+def test_reject_symlink_loop_with_config_error(tmp_path: Path, path: str) -> None:
     (tmp_path / "loop").symlink_to("loop")
+    (tmp_path / "alias").symlink_to("loop")
     with pytest.raises(ConfigError, match="Cannot resolve"):
-        resolve_artifact_path(tmp_path, "loop/report.md")
+        resolve_artifact_path(tmp_path, path)
+
+
+@pytest.mark.parametrize("target", ["future.json", "future/nested/report.md"])
+def test_allow_internal_dangling_artifact_link(tmp_path: Path, target: str) -> None:
+    (tmp_path / "report").symlink_to(target)
+    assert resolve_artifact_path(tmp_path, "report") == tmp_path / target
+    assert not (tmp_path / target).exists()
 
 
 @pytest.mark.parametrize(
