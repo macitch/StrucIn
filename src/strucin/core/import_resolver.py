@@ -46,7 +46,7 @@ def _resolve_to_internal(module: str, known_modules: set[str]) -> str | None:
 def _package_parts(file_metadata: FileMetadata) -> list[str]:
     """Return the package component list for the file's containing package."""
     parts = file_metadata.module_path.split(".")
-    if file_metadata.path.endswith("__init__.py"):
+    if file_metadata.path.rsplit("/", 1)[-1] == "__init__.py":
         return parts
     return parts[:-1]
 
@@ -81,6 +81,8 @@ def _resolve_import_targets(file_metadata: FileMetadata, import_info: ImportInfo
     base_module = import_info.module or ""
     if import_info.level > 0:
         relative_base = _resolve_relative_base(file_metadata, import_info.level)
+        if not relative_base:
+            return []
         base_module = _join_module(relative_base, base_module)
 
     if base_module:
@@ -122,6 +124,8 @@ def _resolve_internal_targets_for_import(
     base_module = import_info.module
     if import_info.level > 0:
         relative_base = _resolve_relative_base(file_metadata, import_info.level)
+        if not relative_base:
+            return set()
         base_module = _join_module(relative_base, base_module)
 
     if not base_module:

@@ -7,7 +7,7 @@ from pathlib import Path
 from strucin import __version__
 from strucin.core.analyzer import AnalysisResult, FileAnalysis
 from strucin.core.config import ReportConfig
-from strucin.core.explainer import redact_analysis
+from strucin.core.privacy import anonymize_analysis
 
 
 @dataclass(frozen=True)
@@ -105,7 +105,7 @@ def generate_markdown_report(  # noqa: C901
     report_config: ReportConfig | None = None,
 ) -> str:
     cfg = report_config or ReportConfig()
-    active_analysis = redact_analysis(analysis) if safe_mode else analysis
+    active_analysis = anonymize_analysis(analysis) if safe_mode else analysis
     lines: list[str] = []
     lines.append("# StrucIn Architecture Report")
     lines.append("")

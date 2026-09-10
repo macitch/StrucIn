@@ -29,6 +29,7 @@ import ast
 import hashlib
 import json
 import logging
+from collections.abc import Sequence
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from dataclasses import asdict
 from datetime import UTC, datetime
@@ -41,7 +42,7 @@ from strucin.core.analysis_cache import (
     restore_cached_analysis,
     write_analysis_cache,
 )
-from strucin.core.artifacts import build_artifact_metadata
+from strucin.core.artifacts import build_artifact_metadata, resolve_artifact_path
 from strucin.core.import_resolver import build_graph_edges
 from strucin.core.indexer import FileMetadata, scan_repository
 from strucin.core.metrics import build_adjacency, compute_fan_metrics, detect_cycles
@@ -54,6 +55,8 @@ from strucin.core.models import DependencyEdge as DependencyEdge
 from strucin.core.models import FileAnalysis as FileAnalysis
 from strucin.core.models import FunctionInfo as FunctionInfo
 from strucin.core.models import ImportInfo as ImportInfo
+from strucin.core.privacy import anonymize_analysis
+from strucin.core.repository_files import read_repository_bytes
 
 _logger = logging.getLogger(__name__)
 
@@ -194,7 +197,7 @@ def _analyze_file_with_cache(
     bytes visible (as U+FFFD) rather than silently dropping them.
     """
     file_path = root / file_metadata.path
-    raw = file_path.read_bytes()
+    raw = read_repository_bytes(root, file_path)
     sha256 = hashlib.sha256(raw).hexdigest()
     cached_entry = cache_entries.get(file_metadata.path)
     if (
@@ -225,11 +228,17 @@ def analyze_repository(
     excluded_dirs: set[str] | None = None,
     max_workers: int | None = None,
     executor: str = "auto",
+    *,
+    use_cache: bool = True,
+    source_roots: Sequence[str] | None = None,
 ) -> AnalysisResult:
-    index = scan_repository(repo_path, excluded_dirs=excluded_dirs, max_workers=max_workers)
+    """Analyze in memory; disable cache reads and writes for privacy-sensitive calls."""
+    cache_path = resolve_artifact_path(repo_path, ".strucin_cache/analysis_cache.json")
+    index = scan_repository(
+        repo_path, excluded_dirs=excluded_dirs, max_workers=max_workers, source_roots=source_roots
+    )
     root = Path(index.repo_root)
-    cache_path = root / ".strucin_cache" / "analysis_cache.json"
-    cache_entries = load_analysis_cache(cache_path)
+    cache_entries = load_analysis_cache(cache_path) if use_cache else {}
     file_map: dict[str, FileMetadata] = {f.module_path: f for f in index.files}
 
     use_process = executor == "process" or (
@@ -282,10 +291,11 @@ def analyze_repository(
 
     cycles = detect_cycles(nodes, adjacency)
     generated_at = datetime.now(UTC).isoformat()
-    try:
-        write_analysis_cache(cache_path, updated_cache, generated_at=generated_at)
-    except Exception as exc:  # noqa: BLE001
-        _logger.warning("cache write failed (continuing without cache): %s", exc)
+    if use_cache:
+        try:
+            write_analysis_cache(cache_path, updated_cache, generated_at=generated_at)
+        except Exception as exc:  # noqa: BLE001
+            _logger.warning("cache write failed (continuing without cache): %s", exc)
     return AnalysisResult(
         repo_root=index.repo_root,
         generated_at=generated_at,
@@ -302,7 +312,11 @@ def write_analysis(
     analysis: AnalysisResult,
     analysis_path: Path,
     dependency_graph_path: Path,
+    *,
+    safe_mode: bool = False,
 ) -> None:
+    if safe_mode:
+        analysis = anonymize_analysis(analysis)
     analysis_payload = {
         "artifact_metadata": build_artifact_metadata(
             "analysis", generated_at=analysis.generated_at

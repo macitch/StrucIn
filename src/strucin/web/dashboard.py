@@ -17,12 +17,14 @@ import json
 import logging
 import socket
 import threading
+from collections.abc import Sequence
 from dataclasses import asdict
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from strucin.core.analyzer import AnalysisResult, analyze_repository
-from strucin.core.artifacts import build_artifact_metadata
+from strucin.core.artifacts import build_artifact_metadata, resolve_artifact_path
+from strucin.core.privacy import anonymize_analysis
 from strucin.exceptions import DashboardSchemaError
 
 _logger = logging.getLogger(__name__)
@@ -80,22 +82,32 @@ def build_dashboard(
     excluded_dirs: set[str] | None = None,
     max_workers: int | None = None,
     executor: str = "auto",
+    *,
+    safe_mode: bool = False,
+    source_roots: Sequence[str] | None = None,
 ) -> Path:
+    destinations = {
+        name: resolve_artifact_path(output_dir, name)
+        for name in ("data.json", "index.html", "app.js", "styles.css")
+    }
     analysis = analyze_repository(
         repo_path,
         excluded_dirs=excluded_dirs,
         max_workers=max_workers,
         executor=executor,
+        use_cache=not safe_mode,
+        source_roots=source_roots,
     )
+    if safe_mode:
+        analysis = anonymize_analysis(analysis)
     data = _serialize_analysis(analysis)
     _validate_data(data)  # raises before any write if schema is violated
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    (output_dir / "data.json").write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
-    (output_dir / "index.html").write_text(_read_asset("index.html"), encoding="utf-8")
-    (output_dir / "app.js").write_text(_read_asset("app.js"), encoding="utf-8")
-    (output_dir / "styles.css").write_text(_read_asset("styles.css"), encoding="utf-8")
-    return output_dir / "index.html"
+    destinations["data.json"].write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    for name in ("index.html", "app.js", "styles.css"):
+        destinations[name].write_text(_read_asset(name), encoding="utf-8")
+    return destinations["index.html"]
 
 
 def serve_dashboard(

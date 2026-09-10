@@ -17,11 +17,14 @@ from __future__ import annotations
 import argparse
 import logging
 import sys
+from collections.abc import Sequence
 from pathlib import Path
 
 from strucin.cli.ui import print_error
 from strucin.core.analyzer import AnalysisResult, analyze_repository
 from strucin.core.config import load_config
+from strucin.core.privacy import anonymize_analysis
+from strucin.exceptions import StrucInError
 
 _logger = logging.getLogger(__name__)
 
@@ -33,7 +36,7 @@ _DEFAULT_COMPLEXITY_THRESHOLD = 15
 # ---------------------------------------------------------------------------
 
 
-def check_cycles(repo_path: Path) -> int:
+def check_cycles(repo_path: Path, *, source_roots: Sequence[str] | None = None) -> int:
     """Run the analysis pipeline and report any dependency cycles found.
 
     Args:
@@ -48,13 +51,18 @@ def check_cycles(repo_path: Path) -> int:
         excluded_dirs=config.excluded_dirs,
         max_workers=config.performance.max_workers,
         executor=config.performance.executor,
+        use_cache=not config.security.safe_mode,
+        source_roots=source_roots if source_roots is not None else config.source_roots,
     )
+    if config.security.safe_mode:
+        analysis = anonymize_analysis(analysis)
 
     if not analysis.cycles:
         return 0
 
     print_error(
-        f"Dependency cycles detected in {repo_path} — {len(analysis.cycles)} cycle(s) found."
+        f"Dependency cycles detected in {analysis.repo_root} — "
+        f"{len(analysis.cycles)} cycle(s) found."
     )
     for index, cycle in enumerate(analysis.cycles, start=1):
         cycle_repr = " -> ".join(cycle) + f" -> {cycle[0]}"
@@ -63,7 +71,12 @@ def check_cycles(repo_path: Path) -> int:
     return 1
 
 
-def check_complexity(repo_path: Path, threshold: int = _DEFAULT_COMPLEXITY_THRESHOLD) -> int:
+def check_complexity(
+    repo_path: Path,
+    threshold: int = _DEFAULT_COMPLEXITY_THRESHOLD,
+    *,
+    source_roots: Sequence[str] | None = None,
+) -> int:
     """Run the analysis pipeline and report modules that exceed *threshold*.
 
     Args:
@@ -81,7 +94,11 @@ def check_complexity(repo_path: Path, threshold: int = _DEFAULT_COMPLEXITY_THRES
         excluded_dirs=config.excluded_dirs,
         max_workers=config.performance.max_workers,
         executor=config.performance.executor,
+        use_cache=not config.security.safe_mode,
+        source_roots=source_roots if source_roots is not None else config.source_roots,
     )
+    if config.security.safe_mode:
+        analysis = anonymize_analysis(analysis)
 
     offenders = [fa for fa in analysis.files if fa.cyclomatic_complexity > threshold]
 
@@ -89,7 +106,7 @@ def check_complexity(repo_path: Path, threshold: int = _DEFAULT_COMPLEXITY_THRES
         return 0
 
     print_error(
-        f"Complexity threshold exceeded in {repo_path} — "
+        f"Complexity threshold exceeded in {analysis.repo_root} — "
         f"{len(offenders)} module(s) above threshold of {threshold}."
     )
     for fa in sorted(offenders, key=lambda f: f.cyclomatic_complexity, reverse=True):
@@ -118,6 +135,13 @@ def _build_cycles_parser() -> argparse.ArgumentParser:
         default=Path(),
         help="Path to the repository root (default: current directory).",
     )
+    parser.add_argument(
+        "--source-root",
+        dest="source_roots",
+        action="append",
+        metavar="DIR",
+        help="Repository-relative import root; repeat to override configured source roots.",
+    )
     return parser
 
 
@@ -142,6 +166,13 @@ def _build_complexity_parser() -> argparse.ArgumentParser:
             f"Maximum allowed cyclomatic complexity per module "
             f"(default: {_DEFAULT_COMPLEXITY_THRESHOLD})."
         ),
+    )
+    parser.add_argument(
+        "--source-root",
+        dest="source_roots",
+        action="append",
+        metavar="DIR",
+        help="Repository-relative import root; repeat to override configured source roots.",
     )
     return parser
 
@@ -169,8 +200,8 @@ def main_cycles(argv: list[str] | None = None) -> int:
         return 1
 
     try:
-        return check_cycles(repo_path)
-    except (PermissionError, FileNotFoundError, ValueError) as exc:
+        return check_cycles(repo_path, source_roots=args.source_roots)
+    except (StrucInError, PermissionError, FileNotFoundError, ValueError) as exc:
         print_error(str(exc))
         return 1
     except Exception as exc:  # pragma: no cover - defensive fallback
@@ -196,8 +227,8 @@ def main_complexity(argv: list[str] | None = None) -> int:
         return 1
 
     try:
-        return check_complexity(repo_path, threshold=args.threshold)
-    except (PermissionError, FileNotFoundError, ValueError) as exc:
+        return check_complexity(repo_path, threshold=args.threshold, source_roots=args.source_roots)
+    except (StrucInError, PermissionError, FileNotFoundError, ValueError) as exc:
         print_error(str(exc))
         return 1
     except Exception as exc:  # pragma: no cover - defensive fallback

@@ -19,6 +19,7 @@ on:
       - "**.py"
       - ".strucin.toml"
       - "pyproject.toml"
+      - "action.yml"
 
   push:
     branches:
@@ -27,6 +28,7 @@ on:
       - "**.py"
       - ".strucin.toml"
       - "pyproject.toml"
+      - "action.yml"
 
   workflow_dispatch:
     inputs:
@@ -110,21 +112,24 @@ jobs:
       - name: Write job summary
         if: always()
         shell: bash
+        env:
+          REPORT_PATH: ${{ steps.strucin.outputs.report-path }}
+          CYCLES: ${{ steps.strucin.outputs.cycles-found }}
+          STRUCIN_COMMAND: ${{ github.event_name == 'workflow_dispatch' && inputs.command || 'report' }}
         run: |
-          REPORT_PATH="${{ steps.strucin.outputs.report-path }}"
-          CYCLES="${{ steps.strucin.outputs.cycles-found }}"
+          CYCLES="${CYCLES:-unknown}"
 
           {
             echo "## StrucIn Architecture Analysis"
             echo ""
             echo "| Field | Value |"
             echo "|-------|-------|"
-            echo "| Command | \`${{ github.event_name == 'workflow_dispatch' && inputs.command || 'report' }}\` |"
+            echo "| Command | \`${STRUCIN_COMMAND}\` |"
             echo "| Python version | \`3.12\` |"
             echo "| Dependency cycles found | \`${CYCLES}\` |"
             echo "| Report path | \`${REPORT_PATH}\` |"
-            echo "| Triggered by | \`${{ github.event_name }}\` |"
-            echo "| Commit | \`${{ github.sha }}\` |"
+            echo "| Triggered by | \`${GITHUB_EVENT_NAME}\` |"
+            echo "| Commit | \`${GITHUB_SHA}\` |"
             echo ""
 
             if [ -f "${REPORT_PATH}" ]; then
@@ -186,11 +191,17 @@ jobs:
       - name: Write strict-mode job summary
         if: always()
         shell: bash
+        env:
+          CYCLES: ${{ steps.strucin-strict.outputs.cycles-found }}
+          ACTION_OUTCOME: ${{ steps.strucin-strict.outcome }}
+          REPORT_PATH: ${{ steps.strucin-strict.outputs.report-path }}
         run: |
-          CYCLES="${{ steps.strucin-strict.outputs.cycles-found }}"
-          STATUS="passed"
+          CYCLES="${CYCLES:-unknown}"
+          STATUS="failed — analysis or report generation did not complete"
           if [ "${CYCLES}" = "true" ]; then
             STATUS="failed — cycles detected"
+          elif [ "${ACTION_OUTCOME}" = "success" ]; then
+            STATUS="passed"
           fi
 
           {
@@ -200,5 +211,5 @@ jobs:
             echo "|-------|-------|"
             echo "| Cycle gate | \`${STATUS}\` |"
             echo "| Cycles found | \`${CYCLES}\` |"
-            echo "| Report | \`${{ steps.strucin-strict.outputs.report-path }}\` |"
+            echo "| Report | \`${REPORT_PATH}\` |"
           } >> "$GITHUB_STEP_SUMMARY"

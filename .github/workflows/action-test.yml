@@ -1,0 +1,98 @@
+name: Composite Action regression
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  cycle-gate:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        command: [scan, analyze, report]
+        cyclic: ['true', 'false']
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create src-layout fixture with misleading old artifacts
+        shell: bash
+        env:
+          CYCLIC: ${{ matrix.cyclic }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path("action-fixture")
+          package = root / "src/private_pkg"
+          package.mkdir(parents=True)
+          (package / "a.py").write_text("import private_pkg.b\n", encoding="utf-8")
+          cyclic = os.environ["CYCLIC"] == "true"
+          (package / "b.py").write_text("import private_pkg.a\n" if cyclic else "x = 1\n", encoding="utf-8")
+          (root / ".strucin.toml").write_text(
+              '[output]\nanalysis = "results/analysis.json"\n'
+              'dependency_graph = "graphs/deps.json"\n'
+              'report = "reports/current report.md"\nrepo_index = "indexes/repo.json"\n',
+              encoding="utf-8",
+          )
+          (root / "results").mkdir()
+          (root / "results/analysis.json").write_text(
+              json.dumps({"cycles": [] if cyclic else [["stale"]]}), encoding="utf-8"
+          )
+          (root / "reports").mkdir()
+          (root / "reports/current report.md").write_text("STALE REPORT", encoding="utf-8")
+          PY
+      - name: Run local Action with strict cycle gate
+        id: strucin
+        continue-on-error: true
+        uses: ./
+        with:
+          path: action-fixture
+          command: ${{ matrix.command }}
+          fail-on-cycles: 'true'
+          safe-mode: 'true'
+          post-comment: 'false'
+      - name: Verify composite outcome and fresh outputs
+        if: always()
+        shell: bash
+        env:
+          EXPECTED_CYCLES: ${{ matrix.cyclic }}
+          COMMAND: ${{ matrix.command }}
+          ACTION_OUTCOME: ${{ steps.strucin.outcome }}
+          CYCLES_FOUND: ${{ steps.strucin.outputs.cycles-found }}
+          CYCLE_COUNT: ${{ steps.strucin.outputs.cycle-count }}
+          ANALYSIS_PATH: ${{ steps.strucin.outputs.analysis-path }}
+          REPORT_PATH: ${{ steps.strucin.outputs.report-path }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          cyclic = os.environ["EXPECTED_CYCLES"] == "true"
+          assert os.environ["ACTION_OUTCOME"] == ("failure" if cyclic else "success")
+          assert os.environ["CYCLES_FOUND"] == str(cyclic).lower()
+          assert os.environ["CYCLE_COUNT"] == str(int(cyclic))
+          root = Path("action-fixture").resolve()
+          analysis = Path(os.environ["ANALYSIS_PATH"])
+          assert analysis == root / "results/analysis.json"
+          text = analysis.read_text(encoding="utf-8")
+          payload = json.loads(text)
+          assert len(payload["cycles"]) == int(cyclic)
+          assert "private_pkg" not in text
+          assert "stale" not in text
+          assert (root / "graphs/deps.json").is_file()
+          if os.environ["COMMAND"] == "report":
+              report = Path(os.environ["REPORT_PATH"])
+              assert report == root / "reports/current report.md"
+              assert "STALE REPORT" not in report.read_text(encoding="utf-8")
+          else:
+              assert os.environ["REPORT_PATH"] == ""
+          if os.environ["COMMAND"] == "scan":
+              assert (root / "indexes/repo.json").is_file()
+          PY

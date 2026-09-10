@@ -220,6 +220,74 @@ Notes:
 - `max_workers` controls parallel scanning/analysis/semantic indexing
 - JSON artifacts are written to the target repo root; Markdown reports go to `docs/`
 
+## Source Roots
+
+StrucIn keeps repository-relative file paths separate from Python import names:
+`src/pkg/service.py` is recorded at that path with module name `pkg.service`.
+Flat layouts and namespace packages are supported. Source roots are selected in
+this order:
+
+1. Repeated `--source-root DIR` options for the current command.
+2. `[scan] source_roots` in `.strucin.toml`.
+3. Static packaging metadata: setuptools `package-dir` / `packages.find.where`
+   in `pyproject.toml`, Poetry `packages[].from`, or setuptools `package_dir` /
+   `options.packages.find.where` in `setup.cfg`.
+4. A top-level `src/` directory without `src/__init__.py`, then the repository root.
+
+```toml
+[scan]
+source_roots = ["src", "components/shared/python"]
+```
+
+```bash
+strucin analyze /path/to/repo --source-root src --source-root components/shared/python
+strucin-check-cycles /path/to/repo --source-root src
+```
+
+The override is available on `scan`, `analyze`, `report`, `explain`, `search`,
+`web`, and both pre-commit hooks. Library entry points accept `source_roots=`;
+pass repository configuration explicitly, as with other library options.
+Use `["."]` (or `--source-root .`) to retain repository-relative import names
+and disable automatic discovery. Paths must name existing directories inside
+the repository; absolute paths and `..` are rejected.
+
+Nested roots take precedence over their parents. Named setuptools package
+mappings preserve the configured package prefix. Files outside configured roots,
+such as tests and scripts, retain repository-relative module names. Conflicting
+files with the same import name cause a clear error; adjust the roots or exclude
+the duplicate directory. StrucIn reads metadata without running `setup.py` or
+importing the project. For dynamic build configuration or other packaging tools,
+set the roots explicitly.
+
+Analysis caches recheck module identities, and search rebuilds older indexes or
+indexes created with different source-root mappings. Existing snapshots keep
+their original module names; regenerate them before comparing layouts across
+this change.
+
+Packaging conventions: [setuptools package discovery](https://setuptools.pypa.io/en/latest/userguide/package_discovery.html)
+and [Poetry packages](https://python-poetry.org/docs/pyproject/#packages).
+
+## Safe Mode
+
+For shareable output, set `[security] safe_mode = true` in `.strucin.toml`, or
+pass `--safe-mode` to `scan`, `analyze`, `report`, `explain`, `search`, or `web`:
+
+```bash
+strucin analyze /path/to/repo --safe-mode
+strucin explain --path /path/to/repo --safe-mode
+strucin web --path /path/to/repo --safe-mode
+strucin diff before.json after.json --safe-mode
+```
+
+Safe mode anonymizes names and paths in generated content and LLM context,
+omits docstrings/source snippets, skips raw analysis caches, and keeps a separate
+safe narration cache. Search uses an in-memory index and anonymous results.
+`--no-safe-mode` overrides the repository setting for one run.
+
+Existing artifacts are not retroactively scrubbed. Anonymous labels are local to
+an export; compare original snapshots with `diff --safe-mode`. See
+[SECURITY.md](SECURITY.md#safe-mode) for the full contract and library usage.
+
 ## Output Artifacts
 
 | Artifact | Location | Description |
@@ -245,8 +313,27 @@ Run StrucIn in CI and post architecture reports as PR comments:
     fail-on-cycles: false
 ```
 
+Every Action command (`scan`, `analyze`, or `report`) produces fresh analysis
+and dependency graph JSON at the locations configured in `.strucin.toml`.
+The cycle decision uses that run's in-memory analysis. `report` renders the same
+result; stale or malformed snapshots from earlier runs cannot change the gate.
+Analysis or artifact-writing errors fail the Action even in advisory mode.
+
+Set `fail-on-cycles: 'true'` to fail when the current analysis contains cycles.
+`safe-mode: 'true'` anonymizes artifacts and preserves cycle enforcement; it does
+not suppress errors. With the input left false, the repository's safe-mode
+configuration still applies.
+
+The Action exposes `analysis-path`, `cycles-found`, `cycle-count`, and
+`report-path`. Outputs are set after artifact generation succeeds, including when
+the cycle gate subsequently fails. A failure before completion leaves the cycle
+result unset, rather than reporting false. `report-path` is empty for `scan` and
+`analyze`; old reports are never reused for comments or uploads. Reports from
+strict cycle failures are still uploaded and can be posted to the PR when enabled.
+
 See `.github/workflows/example-usage.yml` for a full example with strict mode
-and workflow dispatch support.
+and workflow dispatch support. `.github/workflows/action-test.yml` checks the
+composite Action against cyclic and acyclic fixtures for all three commands.
 
 ## Pre-commit Hooks
 
@@ -290,6 +377,10 @@ The `examples/` directory contains sample output artifacts generated by running
 StrucIn on its own codebase, so you can see what you get before installing.
 
 ## Security
+
+Source and documentation file links must resolve to regular files inside the
+repository. External, dangling, and looping links are skipped; directory links
+are not traversed. Older search indexes are rebuilt to apply these read rules.
 
 See [SECURITY.md](SECURITY.md) for the security policy, how StrucIn handles
 your code, and how to report vulnerabilities.

@@ -7,6 +7,7 @@ import logging
 import os
 import re
 import threading
+from collections.abc import Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass
 from dataclasses import replace as dc_replace
@@ -18,6 +19,12 @@ from typing import Any
 
 from strucin.core.artifacts import build_artifact_metadata
 from strucin.core.indexer import EXCLUDED_DIRS, FileMetadata, scan_repository
+from strucin.core.repository_files import (
+    FILE_POLICY_VERSION,
+    read_repository_text,
+    resolve_repository_file,
+)
+from strucin.core.source_roots import source_roots_key
 
 TOKEN_PATTERN = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 
@@ -47,6 +54,8 @@ class SemanticIndex:
     chunk_count: int
     chunks: list[SemanticChunk]
     vectors: list[list[float]]
+    source_roots_key: str = ""
+    file_policy_version: str = ""
 
 
 @dataclass(frozen=True)
@@ -194,8 +203,10 @@ def _doc_chunks(repo_root: Path, excluded_dirs: set[str]) -> list[SemanticChunk]
             if not (lower.endswith(".md") or lower.endswith(".rst") or lower.endswith(".txt")):
                 continue
             file_path = root_path / file_name
+            if resolve_repository_file(repo_root, file_path) is None:
+                continue
             relative_path = file_path.relative_to(repo_root).as_posix()
-            text = file_path.read_text(encoding="utf-8", errors="ignore").strip()
+            text = read_repository_text(repo_root, file_path).strip()
             if not text:
                 continue
             chunks.append(
@@ -218,7 +229,7 @@ def _assign_chunk_ids(chunks: list[SemanticChunk]) -> list[SemanticChunk]:
 
 
 def _chunks_for_metadata(root: Path, file_metadata: FileMetadata) -> list[SemanticChunk]:
-    source = (root / file_metadata.path).read_text(encoding="utf-8", errors="ignore")
+    source = read_repository_text(root, root / file_metadata.path)
     return _python_chunks_for_file(file_metadata, source)
 
 
@@ -268,12 +279,15 @@ def build_semantic_index(
     embedding_model: str = "all-MiniLM-L6-v2",
     excluded_dirs: set[str] | None = None,
     max_workers: int | None = None,
+    *,
+    source_roots: Sequence[str] | None = None,
 ) -> SemanticIndex:
     active_excluded_dirs = excluded_dirs if excluded_dirs is not None else EXCLUDED_DIRS
     index = scan_repository(
         repo_path,
         excluded_dirs=active_excluded_dirs,
         max_workers=max_workers,
+        source_roots=source_roots,
     )
     root = Path(index.repo_root)
 
@@ -300,6 +314,8 @@ def build_semantic_index(
         chunk_count=len(all_chunks),
         chunks=all_chunks,
         vectors=vectors,
+        source_roots_key=source_roots_key(repo_path, source_roots),
+        file_policy_version=FILE_POLICY_VERSION,
     )
 
 
@@ -316,6 +332,8 @@ def write_semantic_index(index: SemanticIndex, output_path: Path) -> None:
         "chunk_count": index.chunk_count,
         "chunks": [asdict(chunk) for chunk in index.chunks],
         "vectors": index.vectors,
+        "source_roots_key": index.source_roots_key,
+        "file_policy_version": index.file_policy_version,
     }
     with output_path.open("w", encoding="utf-8") as file:
         json.dump(payload, file, indent=2)
@@ -333,6 +351,19 @@ def load_semantic_index(input_path: Path) -> SemanticIndex:
         chunk_count=payload["chunk_count"],
         chunks=chunks,
         vectors=payload["vectors"],
+        source_roots_key=payload.get("source_roots_key", ""),
+        file_policy_version=payload.get("file_policy_version", ""),
+    )
+
+
+def semantic_index_matches_source_roots(
+    index: SemanticIndex, repo_path: Path, source_roots: Sequence[str] | None = None
+) -> bool:
+    """Require current import mappings and repository-file selection rules."""
+    return (
+        index.file_policy_version == FILE_POLICY_VERSION
+        and index.repo_root == str(repo_path.resolve())
+        and index.source_roots_key == source_roots_key(repo_path, source_roots)
     )
 
 
