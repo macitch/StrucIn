@@ -48,8 +48,7 @@ source .venv/bin/activate
 
 ```bash
 pip install --upgrade pip
-pip install ruff mypy pytest
-pip install -e .
+pip install -e ".[dev]"
 ```
 
 ### 3. Run the CLI
@@ -68,11 +67,12 @@ strucin init --path /path/to/myrepo
 strucin scan /path/to/myrepo
 strucin analyze /path/to/myrepo
 strucin report /path/to/myrepo     # writes docs/REPORT.md
-strucin explain /path/to/myrepo    # writes docs/EXPLAIN.md (template, no key needed)
+strucin explain --path /path/to/myrepo  # writes docs/EXPLAIN.md (template, no key needed)
 
 # Enable LLM-powered narration
+pip install -e ".[llm]"
 export ANTHROPIC_API_KEY="sk-ant-..."
-strucin explain /path/to/myrepo    # writes docs/EXPLAIN.md 
+strucin explain --path /path/to/myrepo  # writes docs/EXPLAIN.md
 
 # Semantic search
 strucin search "authentication middleware" --path /path/to/myrepo
@@ -84,7 +84,16 @@ strucin diff before.json after.json
 strucin analyze /path/to/myrepo --json
 
 # Launch web dashboard
-strucin web /path/to/myrepo
+strucin web --path /path/to/myrepo
+```
+
+With `--json`, `scan`, `analyze`, `search`, and `diff` write one JSON document to
+stdout on success. Progress, timing summaries, warnings, and errors go to stderr.
+Check the exit status before consuming the result; failed commands return a
+nonzero status. For example:
+
+```bash
+strucin analyze /path/to/myrepo --json > analysis-summary.json
 ```
 
 ## Optional Dependencies
@@ -143,11 +152,36 @@ Primary output:
 
 ### `search`
 
-Builds or loads semantic index and returns top semantic matches.
+Builds or reuses a current semantic index and returns top semantic matches.
 
 ```bash
 python -m strucin.cli search "retry failed payment" --path /path/to/repo --top-k 5
+python -m strucin.cli search "retry failed payment" --path /path/to/repo --refresh
 ```
+
+Search checks the contents and paths of eligible Python and documentation files
+on every run. Edits, additions, deletions, renames, source-root mappings, excluded
+directories, and embedding model/dimension settings invalidate the saved index.
+Unchanged inputs reuse their existing embeddings; changing the query, result
+limit, worker count, or timing settings does not require rebuilding them. Older
+indexes without a content fingerprint are rebuilt automatically.
+
+Use `--refresh` to bypass the saved index and regenerate embeddings, including
+after installing a previously unavailable neural model. The fingerprint tracks
+the requested model settings separately from the actual model used, so a hashing
+fallback or a neural model's fixed vector width does not cause repeated rebuilds.
+Safe mode continues to build in memory without reading or writing the saved index.
+
+Queries must use the same embedding model and vector width as the index. If a
+saved neural index's model becomes unavailable, search stops with an error
+before scoring. Restore that model and its dependencies, or set
+`embedding_model = "hashing-v1"` under `[search]` in `.strucin.toml` and rerun
+with `--refresh` to rebuild all vectors. Building a new index can still fall
+back to hashing when a neural model cannot load; the index records the actual
+model used so subsequent queries use that same model.
+
+Library callers can pass `cached_index=` to `build_semantic_index` to request the
+same freshness check; omitting it always builds a new index.
 
 Primary output:
 - `semantic_index.json`
@@ -166,6 +200,18 @@ Primary outputs:
 - `explain.json`
 - `.strucin_cache/explain_cache.json`
 
+Analysis and narration caches are disposable. Unreadable or malformed cache
+files and invalid entries are skipped with a warning, then recomputed. Valid
+entries can still be reused. `explain --refresh` bypasses the narration cache
+read and replaces it with the newly generated entry.
+
+Cache updates use a temporary file in the same directory and atomic replacement,
+so readers see a complete old or new file. If cache persistence fails, the
+computed analysis or narration is still returned with a warning. Required output
+artifacts and path-containment errors continue to fail the command. These rules
+also apply to the separate safe-mode narration cache; safe mode still skips raw
+analysis caches.
+
 ### `diff`
 
 Compares two analysis snapshots and shows what changed: new/resolved cycles,
@@ -175,6 +221,16 @@ complexity delta, coupling shifts, and LOC changes.
 strucin diff before.json after.json
 strucin diff before.json after.json --json
 ```
+
+The summary's total LOC delta includes added modules, removed modules, and LOC
+changes in retained modules. For example, adding 100 lines, removing 40, and
+adding 10 to an existing module reports a net change of +70 lines.
+
+`files_changed` counts added and removed modules plus retained modules with a
+reported LOC, complexity, or coupling change, counting each module once. Coupling
+changes are reported when fan-in or fan-out changes by at least 2. A module rename
+counts as one removal and one addition. Detailed metric-change lists compare
+modules present in both snapshots; additions and removals have their own lists.
 
 ### `web`
 
@@ -218,7 +274,14 @@ explain_metadata = "explain.json"
 
 Notes:
 - `max_workers` controls parallel scanning/analysis/semantic indexing
-- JSON artifacts are written to the target repo root; Markdown reports go to `docs/`
+- By default, JSON artifacts are written to the target repo root; Markdown reports go to `docs/`
+
+Each output can use an independent nested path within the repository, such as
+`dependency_graph = "graphs/nested/dependencies.json"` or
+`explain_metadata = "metadata/narration/details.json"`. Commands validate output
+paths before creating their parent directories. `analyze` and `explain` prepare
+both output parents before writing either result, so a directory-creation error
+does not overwrite one result while leaving the other unwritten.
 
 ## Source Roots
 
@@ -348,6 +411,39 @@ repos:
       - id: strucin-complexity     # fail on high complexity
         args: ['--threshold', '15']
 ```
+
+## Complexity Scoring
+
+StrucIn calculates an AST-based complexity score as **1 plus decision points**:
+
+| Construct | Added points |
+|-----------|--------------|
+| `if`, `elif`, conditional expression (`x if condition else y`) | 1 each |
+| `for`, `async for`, `while` | 1 each |
+| `except` or `except*` handler | 1 per handler |
+| `assert` | 1 each |
+| Boolean `and` / `or` | 1 per operator; six operands add 5 |
+| Comprehension | 1 per `for` generator plus 1 per `if` filter |
+| Refutable `match` case | 1 per case |
+| `match` guard (`case ... if condition`) | 1 per guard, plus boolean operators in it |
+
+An unconditional wildcard or capture case adds no point; a guarded one adds its
+guard's points. Aliases preserve the underlying pattern's behavior. An OR pattern
+counts as a single case, and is unconditional if an alternative is unconditional.
+`try`, `else`, `finally`, context managers, and ordinary expressions add no points
+of their own; decisions inside them still count.
+
+For example, `return a and b and c and d and e and f` scores **6**. A `match`
+with three literal cases and one unconditional wildcard scores **4**.
+
+File and function scores aggregate decisions across their entire AST, including
+nested definitions. Each score starts with one base point; the file score is
+not the sum of function scores. The complexity hook applies its threshold to
+**file/module scores**, and fails only when a score exceeds the threshold.
+
+The corrected rules invalidate older analysis caches automatically. Regenerate
+saved analysis snapshots before comparing complexity across this change; the
+new rules can raise or lower scores without source edits.
 
 ## Quality and Validation
 

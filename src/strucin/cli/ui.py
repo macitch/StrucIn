@@ -63,9 +63,9 @@ def print_warning(message: str) -> None:
         print(f"Warning: {message}", file=sys.stderr)
 
 
-def print_progress(step: int, total: int, message: str) -> None:
+def print_progress(step: int, total: int, message: str, *, stderr: bool = False) -> None:
     if _rich_available:
-        con = _get_console()
+        con = _get_err_console() if stderr else _get_console()
         con.print(f"[bold cyan][{step}/{total}][/bold cyan] {message}")
     else:
         safe_total = max(total, 1)
@@ -73,7 +73,7 @@ def print_progress(step: int, total: int, message: str) -> None:
         width = 20
         filled = int(width * ratio)
         bar = "#" * filled + "-" * (width - filled)
-        print(f"[{bar}] {step}/{safe_total} {message}")
+        print(f"[{bar}] {step}/{safe_total} {message}", file=sys.stderr if stderr else sys.stdout)
 
 
 def create_progress() -> Any:

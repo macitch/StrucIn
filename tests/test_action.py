@@ -184,18 +184,24 @@ def test_analysis_or_write_error_never_emits_false_success(
     assert not output.exists()
 
 
-def test_corrupt_internal_cache_fails_instead_of_reporting_no_cycles(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize("cyclic", [False, True])
+def test_corrupt_internal_cache_rebuilds_before_cycle_gate(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, cyclic: bool
 ) -> None:
     root = tmp_path / "repo"
-    make_repo(root, cyclic=True)
+    paths = make_repo(root, cyclic=cyclic)
     cache = root / ".strucin_cache/analysis_cache.json"
     cache.parent.mkdir()
     cache.write_text("{broken", encoding="utf-8")
     output = tmp_path / "github-output"
     action_env(monkeypatch, root, output)
-    assert action.main() == 1
-    assert not output.exists()
+    assert action.main() == int(cyclic)
+    result = outputs(output)
+    assert result["cycles-found"] == str(cyclic).lower()
+    assert result["cycle-count"] == str(int(cyclic))
+    analysis = json.loads(paths["analysis"].read_text(encoding="utf-8"))
+    assert len(analysis["cycles"]) == int(cyclic)
+    assert json.loads(cache.read_text(encoding="utf-8"))["files"]
 
 
 @pytest.mark.parametrize("value", ["perhaps", "1", ""])

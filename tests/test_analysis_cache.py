@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 
 from strucin.core.analysis_cache import (
@@ -49,7 +50,11 @@ def test_load_analysis_cache_returns_empty_when_version_absent(tmp_path: Path) -
 
 def test_load_analysis_cache_returns_entries_on_version_match(tmp_path: Path) -> None:
     cache_path = tmp_path / "cache.json"
-    entry: dict[str, object] = {"sha256": "abc", "module_path": "pkg.a"}
+    entry: dict[str, object] = {
+        "sha256": "a" * 64,
+        "module_path": "pkg.a",
+        "analysis": make_cache_payload(_SAMPLE_FILE_ANALYSIS, []),
+    }
     payload = {
         "cache_version": CACHE_VERSION,
         "files": {"pkg/a.py": entry},
@@ -58,16 +63,18 @@ def test_load_analysis_cache_returns_entries_on_version_match(tmp_path: Path) ->
 
     result = load_analysis_cache(cache_path)
     assert "pkg/a.py" in result
-    assert result["pkg/a.py"]["sha256"] == "abc"
+    assert result["pkg/a.py"] == entry
 
 
 def test_write_and_reload_analysis_cache_roundtrip(tmp_path: Path) -> None:
     """write_analysis_cache then load_analysis_cache preserves all entries."""
     cache_path = tmp_path / "cache.json"
     entry: dict[str, object] = {
-        "sha256": "def456",
+        "sha256": "d" * 64,
         "module_path": "app.main",
-        "analysis": {},
+        "analysis": make_cache_payload(
+            replace(_SAMPLE_FILE_ANALYSIS, path="app/main.py", module_path="app.main"), []
+        ),
     }
     write_analysis_cache(
         cache_path,
@@ -77,7 +84,7 @@ def test_write_and_reload_analysis_cache_roundtrip(tmp_path: Path) -> None:
 
     result = load_analysis_cache(cache_path)
     assert "app/main.py" in result
-    assert result["app/main.py"]["sha256"] == "def456"
+    assert result["app/main.py"] == entry
 
 
 def test_write_analysis_cache_stores_version_field(tmp_path: Path) -> None:

@@ -75,7 +75,12 @@ class LocDelta:
 
 @dataclass(frozen=True)
 class DiffSummary:
-    """Aggregate statistics for a diff run."""
+    """Aggregate statistics for a diff run.
+
+    ``total_loc_delta`` covers all modules in both snapshots. ``files_changed``
+    counts added and removed modules plus retained modules with a reported LOC,
+    complexity, or coupling change, counting each module once.
+    """
 
     modules_added: int
     modules_removed: int
@@ -279,9 +284,13 @@ def diff_analyses(before_path: Path, after_path: Path) -> DiffResult:
                 )
             )
 
-    total_loc_delta = sum(delta.delta for delta in loc_changes)
+    total_loc_delta = sum(_int_field(entry, "loc") for entry in after_modules.values()) - sum(
+        _int_field(entry, "loc") for entry in before_modules.values()
+    )
     files_changed = len(
-        {d.module_path for d in complexity_changes}
+        set(added_modules)
+        | set(removed_modules)
+        | {d.module_path for d in complexity_changes}
         | {d.module_path for d in coupling_changes}
         | {d.module_path for d in loc_changes}
     )
