@@ -65,10 +65,9 @@ BRANCH_NODES = (
     ast.For,
     ast.AsyncFor,
     ast.While,
-    ast.Try,
     ast.ExceptHandler,
     ast.IfExp,
-    ast.Match,
+    ast.Assert,
 )
 
 # ---------------------------------------------------------------------------
@@ -76,9 +75,35 @@ BRANCH_NODES = (
 # ---------------------------------------------------------------------------
 
 
+def _irrefutable_pattern(pattern: ast.pattern) -> bool:
+    """Recognize wildcard/capture patterns, their aliases, and OR combinations."""
+    if isinstance(pattern, ast.MatchAs):
+        return pattern.pattern is None or _irrefutable_pattern(pattern.pattern)
+    if isinstance(pattern, ast.MatchOr):
+        return any(_irrefutable_pattern(item) for item in pattern.patterns)
+    return False
+
+
+def _decision_count(node: ast.AST) -> int:
+    if isinstance(node, BRANCH_NODES):
+        return 1
+    if isinstance(node, ast.BoolOp):
+        return len(node.values) - 1
+    if isinstance(node, ast.comprehension):
+        return 1 + len(node.ifs)
+    if isinstance(node, ast.match_case):
+        return int(not _irrefutable_pattern(node.pattern)) + int(node.guard is not None)
+    return 0
+
+
 def _node_complexity(node: ast.AST) -> int:
-    branch_count = sum(1 for child in ast.walk(node) if isinstance(child, BRANCH_NODES))
-    return branch_count + 1
+    """Return one plus decisions across this AST, including nested definitions.
+
+    Count conditional statements/expressions, loops, handlers, assertions,
+    boolean operators, comprehension generators/filters, and refutable match
+    cases/guards. A module has one base point, rather than one per function.
+    """
+    return 1 + sum(_decision_count(child) for child in ast.walk(node))
 
 
 def _extract_imports(tree: ast.Module) -> list[ImportInfo]:
@@ -208,7 +233,13 @@ def _analyze_file_with_cache(
         cached_payload = cached_entry.get("analysis")
         if isinstance(cached_payload, dict):
             restored = restore_cached_analysis(cached_payload)
-            if restored is not None:
+            if (
+                restored is not None
+                and restored[0].path == file_metadata.path
+                and restored[0].module_path == file_metadata.module_path
+                and restored[0].loc == file_metadata.loc
+                and restored[0].size_bytes == len(raw)
+            ):
                 return restored[0], restored[1], sha256
     source = raw.decode("utf-8", errors="replace")
     analysis, imports = _analyze_single_file(file_metadata, source)
@@ -294,8 +325,10 @@ def analyze_repository(
     if use_cache:
         try:
             write_analysis_cache(cache_path, updated_cache, generated_at=generated_at)
-        except Exception as exc:  # noqa: BLE001
-            _logger.warning("cache write failed (continuing without cache): %s", exc)
+        except OSError as exc:
+            _logger.warning(
+                "Analysis cache write failed (%s); continuing without cache.", type(exc).__name__
+            )
     return AnalysisResult(
         repo_root=index.repo_root,
         generated_at=generated_at,

@@ -121,7 +121,7 @@ def test_retarget_after_discovery_is_rejected(tmp_path: Path, consumer: str) -> 
         if consumer == "analysis":
             _analyze_file_with_cache(metadata, root, {})
         else:
-            semantic._chunks_for_metadata(root, metadata)
+            semantic._read_python_source(root, metadata)
 
 
 @pytest.mark.skipif(

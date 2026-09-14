@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import sys
 import traceback
 from collections.abc import Sequence
 from dataclasses import replace
@@ -23,7 +24,6 @@ from strucin.core.semantic import (
     build_semantic_index,
     load_semantic_index,
     search_semantic_index,
-    semantic_index_matches_source_roots,
     write_semantic_index,
 )
 from strucin.exceptions import StrucInError
@@ -145,6 +145,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--json", dest="json_output", action="store_true", help="Output JSON"
     )
 
+    search_parser.add_argument(
+        "--refresh",
+        action="store_true",
+        help="Rebuild the semantic index instead of reusing existing embeddings",
+    )
+
     # --- explain ---
     explain_parser = subparsers.add_parser("explain", help="Generate architecture narration")
     explain_parser.add_argument(
@@ -254,6 +260,7 @@ def main(argv: list[str] | None = None) -> int:
                 args.query,
                 args.top_k,
                 json_output=args.json_output,
+                refresh=args.refresh,
                 safe_mode_override=args.safe_mode,
                 source_roots_override=args.source_roots,
             )
@@ -354,7 +361,7 @@ def _run_scan(
     config = _resolve_config(target_path, safe_mode_override, source_roots_override)
     _run_lifecycle_cleanup(target_path, config)
 
-    print_progress(1, 2, "Scanning repository files")
+    print_progress(1, 2, "Scanning repository files", stderr=json_output)
     started = perf_counter()
     repo_index = scan_repository(
         target_path,
@@ -363,7 +370,7 @@ def _run_scan(
         source_roots=config.source_roots,
     )
     _record_timing(timings, "scan_repository", started)
-    print_progress(2, 2, "Writing repository index")
+    print_progress(2, 2, "Writing repository index", stderr=json_output)
     output_path = resolve_artifact_path(target_path, config.output.repo_index)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     started = perf_counter()
@@ -393,7 +400,7 @@ def _run_scan(
             ],
         )
         print(table)
-    _emit_command_summary("scan", target_path, timings, config)
+    _emit_command_summary("scan", target_path, timings, config, json_output=json_output)
     return 0
 
 
@@ -416,7 +423,7 @@ def _run_analyze(
     config = _resolve_config(target_path, safe_mode_override, source_roots_override)
     _run_lifecycle_cleanup(target_path, config)
 
-    print_progress(1, 2, "Running AST analysis")
+    print_progress(1, 2, "Running AST analysis", stderr=json_output)
     started = perf_counter()
     analysis = analyze_repository(
         target_path,
@@ -430,7 +437,8 @@ def _run_analyze(
     analysis_path = resolve_artifact_path(target_path, config.output.analysis)
     dependency_graph_path = resolve_artifact_path(target_path, config.output.dependency_graph)
     analysis_path.parent.mkdir(parents=True, exist_ok=True)
-    print_progress(2, 2, "Writing analysis artifacts")
+    dependency_graph_path.parent.mkdir(parents=True, exist_ok=True)
+    print_progress(2, 2, "Writing analysis artifacts", stderr=json_output)
     started = perf_counter()
     write_analysis(
         analysis, analysis_path, dependency_graph_path, safe_mode=config.security.safe_mode
@@ -465,7 +473,7 @@ def _run_analyze(
         print(table)
         print(f"Analysis file: {_display(analysis_path, config)}")
         print(f"Dependency graph: {_display(dependency_graph_path, config)}")
-    _emit_command_summary("analyze", target_path, timings, config)
+    _emit_command_summary("analyze", target_path, timings, config, json_output=json_output)
     return 0
 
 
@@ -522,6 +530,7 @@ def _run_search(
     top_k: int,
     *,
     json_output: bool = False,
+    refresh: bool = False,
     safe_mode_override: bool | None = None,
     source_roots_override: Sequence[str] | None = None,
 ) -> int:
@@ -537,24 +546,23 @@ def _run_search(
     index_path = resolve_artifact_path(target_path, config.output.semantic_index)
     index_path.parent.mkdir(parents=True, exist_ok=True)
 
-    print_progress(1, 2, "Loading semantic index")
+    print_progress(1, 2, "Loading semantic index", stderr=json_output)
     started = perf_counter()
-    semantic_index = (
+    cached_index = (
         load_semantic_index(index_path)
-        if index_path.exists() and not config.security.safe_mode
+        if not refresh and not config.security.safe_mode and index_path.exists()
         else None
     )
-    if semantic_index is None or not semantic_index_matches_source_roots(
-        semantic_index, target_path, config.source_roots
-    ):
-        semantic_index = build_semantic_index(
-            target_path,
-            dimensions=dimensions,
-            embedding_model=config.search.embedding_model,
-            excluded_dirs=config.excluded_dirs,
-            max_workers=config.performance.max_workers,
-            source_roots=config.source_roots,
-        )
+    semantic_index = build_semantic_index(
+        target_path,
+        dimensions=dimensions,
+        embedding_model=config.search.embedding_model,
+        excluded_dirs=config.excluded_dirs,
+        max_workers=config.performance.max_workers,
+        source_roots=config.source_roots,
+        cached_index=cached_index,
+    )
+    if semantic_index is not cached_index:
         if not config.security.safe_mode:
             write_semantic_index(semantic_index, index_path)
         if not json_output:
@@ -564,7 +572,7 @@ def _run_search(
             )
     _record_timing(timings, "load_or_build_semantic_index", started)
 
-    print_progress(2, 2, "Executing semantic query")
+    print_progress(2, 2, "Executing semantic query", stderr=json_output)
     started = perf_counter()
     hits = search_semantic_index(semantic_index, query, top_k=requested_top_k)
     _record_timing(timings, "search_semantic_index", started)
@@ -587,7 +595,7 @@ def _run_search(
             for rank, hit in enumerate(hits, start=1)
         ]
         print(json.dumps({"query": query, "top_k": requested_top_k, "results": results}, indent=2))
-        _emit_command_summary("search", target_path, timings, config)
+        _emit_command_summary("search", target_path, timings, config, json_output=json_output)
         return 0
 
     print(f"Top {requested_top_k} results for query: {query!r}")
@@ -655,6 +663,7 @@ def _run_explain(
     explain_path = resolve_artifact_path(target_path, config.output.explain_markdown)
     metadata_path = resolve_artifact_path(target_path, config.output.explain_metadata)
     explain_path.parent.mkdir(parents=True, exist_ok=True)
+    metadata_path.parent.mkdir(parents=True, exist_ok=True)
     print_progress(2, 2, "Writing narration artifacts")
     started = perf_counter()
     write_explanation(explanation, explain_path)
@@ -799,6 +808,8 @@ def _emit_command_summary(
     timings: list[CommandTiming],
     config: StrucInConfig,
     extra_fields: dict[str, object] | None = None,
+    *,
+    json_output: bool = False,
 ) -> None:
     if not timings:
         return
@@ -812,7 +823,8 @@ def _emit_command_summary(
                     ["Total (ms)", f"{total_ms:.2f}"],
                     ["Bottleneck", f"{bottleneck.stage} ({bottleneck.duration_ms:.2f} ms)"],
                 ],
-            )
+            ),
+            file=sys.stderr if json_output else sys.stdout,
         )
 
     payload: dict[str, object] = {

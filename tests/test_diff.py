@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -153,3 +155,124 @@ def test_render_diff_json(tmp_path: Path) -> None:
     parsed = json.loads(output)
     assert "added_modules" in parsed
     assert "summary" in parsed
+
+
+@pytest.mark.parametrize(
+    "before_files,after_files,loc_delta,files_changed",
+    [
+        ([], [_make_file("pkg.new", loc=100)], 100, 1),
+        ([_make_file("pkg.old", loc=100)], [], -100, 1),
+        ([], [_make_file("pkg.empty", loc=0)], 0, 1),
+        ([_make_file("pkg.empty", loc=0)], [], 0, 1),
+        ([_make_file("pkg.old", loc=100)], [_make_file("pkg.new", loc=100)], 0, 2),
+        ([_make_file("pkg.old", loc=100)], [_make_file("pkg.new", loc=40)], -60, 2),
+        ([], [], 0, 0),
+    ],
+    ids=["add", "remove", "add-empty", "remove-empty", "rename", "replace", "empty"],
+)
+def test_diff_totals_include_added_and_removed_modules(
+    tmp_path: Path,
+    before_files: list[dict],
+    after_files: list[dict],
+    loc_delta: int,
+    files_changed: int,
+) -> None:
+    before = tmp_path / "before.json"
+    after = tmp_path / "after.json"
+    _write_analysis(before, before_files, [])
+    _write_analysis(after, after_files, [])
+
+    result = diff_analyses(before, after)
+    assert result.summary.total_loc_delta == loc_delta
+    assert result.summary.files_changed == files_changed
+    reverse = diff_analyses(after, before)
+    assert reverse.summary.total_loc_delta == -loc_delta
+    assert reverse.summary.files_changed == files_changed
+
+
+def test_diff_mixed_changes_count_each_affected_module_once(tmp_path: Path) -> None:
+    before = tmp_path / "before.json"
+    after = tmp_path / "after.json"
+    _write_analysis(
+        before,
+        [
+            _make_file("pkg.removed", loc=40),
+            _make_file("pkg.edited", loc=100, cyclomatic_complexity=2),
+            _make_file("pkg.complexity"),
+            _make_file("pkg.coupling"),
+            _make_file("pkg.unchanged", loc=20),
+            _make_file("pkg.below_threshold"),
+        ],
+        [],
+    )
+    _write_analysis(
+        after,
+        [
+            _make_file("pkg.added", loc=100),
+            _make_file("pkg.edited", loc=130, cyclomatic_complexity=4, fan_in=2),
+            _make_file("pkg.complexity", cyclomatic_complexity=3),
+            _make_file("pkg.coupling", fan_out=2),
+            _make_file("pkg.unchanged", loc=20),
+            _make_file("pkg.below_threshold", fan_in=1),
+        ],
+        [],
+    )
+
+    result = diff_analyses(before, after)
+    # +100 added -40 removed +30 retained; three reported edits and two membership changes.
+    assert result.summary.total_loc_delta == 90
+    assert result.summary.files_changed == 5
+    assert result.added_modules == ["pkg.added"]
+    assert result.removed_modules == ["pkg.removed"]
+    assert [change.module_path for change in result.loc_changes] == ["pkg.edited"]
+    assert {change.module_path for change in result.complexity_changes} == {
+        "pkg.edited",
+        "pkg.complexity",
+    }
+    assert {change.module_path for change in result.coupling_changes} == {
+        "pkg.edited",
+        "pkg.coupling",
+    }
+    reverse = diff_analyses(after, before)
+    assert reverse.summary.total_loc_delta == -90
+    assert reverse.summary.files_changed == 5
+
+
+@pytest.mark.parametrize("json_output", [False, True])
+@pytest.mark.parametrize("safe_mode", [False, True])
+def test_cli_diff_reports_complete_totals(
+    tmp_path: Path, json_output: bool, safe_mode: bool
+) -> None:
+    before = tmp_path / "before.json"
+    after = tmp_path / "after.json"
+    _write_analysis(
+        before, [_make_file("private.removed", loc=40), _make_file("private.edited", loc=10)], []
+    )
+    _write_analysis(
+        after, [_make_file("private.added", loc=100), _make_file("private.edited", loc=20)], []
+    )
+    options = ["--json"] if json_output else []
+    if safe_mode:
+        options.append("--safe-mode")
+    result = subprocess.run(
+        [sys.executable, "-m", "strucin.cli", "diff", str(before), str(after), *options],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    if json_output:
+        payload = json.loads(result.stdout)
+        assert payload["summary"] == {
+            "modules_added": 1,
+            "modules_removed": 1,
+            "cycles_new": 0,
+            "cycles_resolved": 0,
+            "total_loc_delta": 70,
+            "files_changed": 3,
+        }
+    else:
+        assert "Total LOC delta: **+70**" in result.stdout
+        assert "Files changed: **3**" in result.stdout
+    if safe_mode:
+        assert "private." not in result.stdout + result.stderr

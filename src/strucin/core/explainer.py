@@ -9,10 +9,10 @@ from dataclasses import dataclass
 from dataclasses import replace as dc_replace
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import cast
 
 from strucin.core.analyzer import AnalysisResult, FileAnalysis, analyze_repository
 from strucin.core.artifacts import build_artifact_metadata, resolve_artifact_path
+from strucin.core.cache_io import read_cache_json, write_cache_json
 from strucin.core.config import LLMConfig
 from strucin.core.privacy import anonymize_analysis, redact_identifiers
 
@@ -337,23 +337,31 @@ def generate_explanation(analysis: AnalysisResult, safe_mode: bool = False) -> s
 
 
 def _load_cache(cache_path: Path) -> dict[str, dict[str, str]]:
-    """Return cached entries keyed by cache_key.
-
-    Returns an empty dict when the file is absent, unparseable, or was written
-    by a different :data:`CACHE_VERSION`.
-    """
-    if not cache_path.exists():
+    """Load valid narration entries, treating damaged or unreadable caches as misses."""
+    parsed = read_cache_json(cache_path, kind="narration cache")
+    if parsed is None or parsed.get("cache_version") != CACHE_VERSION:
         return {}
-    try:
-        parsed = json.loads(cache_path.read_text(encoding="utf-8"))
-    except (ValueError, UnicodeError):
-        return {}
-    if not isinstance(parsed, dict) or parsed.get("cache_version") != CACHE_VERSION:
-        return {}
-    entries = parsed.get("entries", {})
+    entries = parsed.get("entries")
     if not isinstance(entries, dict):
+        _logger.warning("Ignoring narration cache with invalid entries; rebuilding.")
         return {}
-    return cast(dict[str, dict[str, str]], entries)
+    valid: dict[str, dict[str, str]] = {}
+    for key, entry in entries.items():
+        if not isinstance(key, str) or not isinstance(entry, dict):
+            continue
+        content, generated_at = entry.get("content"), entry.get("generated_at")
+        if not isinstance(content, str) or not isinstance(generated_at, str):
+            continue
+        try:
+            timestamp = datetime.fromisoformat(generated_at).isoformat()
+        except ValueError:
+            continue
+        valid[key] = {"content": content, "generated_at": timestamp}
+    if len(valid) != len(entries):
+        _logger.warning(
+            "Ignoring %d invalid narration cache entries; recomputing.", len(entries) - len(valid)
+        )
+    return valid
 
 
 _MAX_CACHE_ENTRIES = 50
@@ -364,9 +372,8 @@ def _write_cache(cache_path: Path, cache: dict[str, dict[str, str]]) -> None:
         oldest_keys = sorted(cache, key=lambda k: cache[k].get("generated_at", ""))
         for key in oldest_keys[: len(cache) - _MAX_CACHE_ENTRIES]:
             del cache[key]
-    cache_path.parent.mkdir(parents=True, exist_ok=True)
     payload = {"cache_version": CACHE_VERSION, "entries": cache}
-    cache_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    write_cache_json(cache_path, payload)
 
 
 def explain_repository(
@@ -396,8 +403,8 @@ def explain_repository(
     if safe_mode:
         llm_tag = hashlib.sha256(llm_tag.encode("utf-8")).hexdigest()
     cache_key = f"safe_mode={safe_mode}:llm={llm_tag}:{_cache_key_from_analysis(redacted)}"
-    cache = _load_cache(cache_path)
-    cached = cache.get(cache_key) if not refresh else None
+    cache = {} if refresh else _load_cache(cache_path)
+    cached = cache.get(cache_key)
     content = None
     generated_at = datetime.now(UTC).isoformat()
     if isinstance(cached, dict) and isinstance(cached.get("content"), str):
@@ -423,7 +430,12 @@ def explain_repository(
         # Never carry unrelated entries or arbitrary cached metadata into a safe cache.
         cache = {}
     cache[cache_key] = {"generated_at": generated_at, "content": content}
-    _write_cache(cache_path, cache)
+    try:
+        _write_cache(cache_path, cache)
+    except OSError as exc:
+        _logger.warning(
+            "Narration cache write failed (%s); continuing without cache.", type(exc).__name__
+        )
     return ExplainOutput(
         repo_root=redacted.repo_root,
         generated_at=generated_at,

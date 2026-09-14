@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Correct complexity scores for boolean operators, match cases/guards, comprehensions, assertions, and exception handlers; document the rules and invalidate analysis caches computed with the previous rules.
+- Correct README quickstart paths for `explain` and `web`, and include the required development and narration dependencies in setup examples.
+- Create dependency-graph and narration-metadata parent directories before writing either command's output artifacts, supporting independent nested output paths.
+- Include added and removed modules in diff LOC totals and changed-file counts, counting each affected module once.
+- Reject search queries whose embedding model differs from the index, even when vector dimensions match, with instructions to restore the model or rebuild with hashing.
+- Recover from unreadable or invalid analysis/narration caches, validate cached entries, and replace cache files atomically; narration refresh bypasses old cache reads.
+- Refresh semantic indexes when indexed files or embedding settings change, and add `search --refresh` for forced rebuilds.
+- Keep `--json` stdout parseable by routing progress and timing summaries to stderr.
 - Confine configured artifacts, automatic caches, and cleanup to the selected output directory.
 - Apply safe mode across generated artifacts, search results, dashboards, LLM context, and caches.
 - Resolve Python import names from source roots and packaging metadata so src layouts produce correct dependency graphs and cycle checks.

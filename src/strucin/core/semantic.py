@@ -21,7 +21,7 @@ from strucin.core.artifacts import build_artifact_metadata
 from strucin.core.indexer import EXCLUDED_DIRS, FileMetadata, scan_repository
 from strucin.core.repository_files import (
     FILE_POLICY_VERSION,
-    read_repository_text,
+    read_repository_bytes,
     resolve_repository_file,
 )
 from strucin.core.source_roots import source_roots_key
@@ -56,6 +56,14 @@ class SemanticIndex:
     vectors: list[list[float]]
     source_roots_key: str = ""
     file_policy_version: str = ""
+    input_fingerprint: str = ""
+
+
+@dataclass(frozen=True)
+class _SemanticSource:
+    path: str
+    content: bytes
+    metadata: FileMetadata | None = None
 
 
 @dataclass(frozen=True)
@@ -193,44 +201,85 @@ def _python_chunks_for_file(file_metadata: FileMetadata, source: str) -> list[Se
     return chunks
 
 
-def _doc_chunks(repo_root: Path, excluded_dirs: set[str]) -> list[SemanticChunk]:
-    chunks: list[SemanticChunk] = []
+def _document_sources(repo_root: Path, excluded_dirs: set[str]) -> list[_SemanticSource]:
+    sources: list[_SemanticSource] = []
     for current_root, dir_names, file_names in os.walk(repo_root, topdown=True):
         dir_names[:] = [dir_name for dir_name in dir_names if dir_name not in excluded_dirs]
         root_path = Path(current_root)
         for file_name in file_names:
-            lower = file_name.lower()
-            if not (lower.endswith(".md") or lower.endswith(".rst") or lower.endswith(".txt")):
+            if not file_name.lower().endswith((".md", ".rst", ".txt")):
                 continue
             file_path = root_path / file_name
             if resolve_repository_file(repo_root, file_path) is None:
                 continue
-            relative_path = file_path.relative_to(repo_root).as_posix()
-            text = read_repository_text(repo_root, file_path).strip()
-            if not text:
-                continue
-            chunks.append(
-                SemanticChunk(
-                    id="",
-                    path=relative_path,
-                    module_path=None,
-                    symbol=file_name,
-                    kind="document",
-                    start_line=1,
-                    end_line=max(1, len(text.splitlines())),
-                    text=text,
+            sources.append(
+                _SemanticSource(
+                    path=file_path.relative_to(repo_root).as_posix(),
+                    content=read_repository_bytes(repo_root, file_path),
                 )
             )
-    return sorted(chunks, key=lambda item: item.path)
+    return sorted(sources, key=lambda item: item.path)
+
+
+def _chunks_for_source(source: _SemanticSource) -> list[SemanticChunk]:
+    text = source.content.decode("utf-8", errors="ignore").replace("\r\n", "\n").replace("\r", "\n")
+    if source.metadata is not None:
+        return _python_chunks_for_file(source.metadata, text)
+    text = text.strip()
+    if not text:
+        return []
+    return [
+        SemanticChunk(
+            id="",
+            path=source.path,
+            module_path=None,
+            symbol=Path(source.path).name,
+            kind="document",
+            start_line=1,
+            end_line=max(1, len(text.splitlines())),
+            text=text,
+        )
+    ]
 
 
 def _assign_chunk_ids(chunks: list[SemanticChunk]) -> list[SemanticChunk]:
     return [dc_replace(chunk, id=f"chunk-{index:05d}") for index, chunk in enumerate(chunks, 1)]
 
 
-def _chunks_for_metadata(root: Path, file_metadata: FileMetadata) -> list[SemanticChunk]:
-    source = read_repository_text(root, root / file_metadata.path)
-    return _python_chunks_for_file(file_metadata, source)
+def _read_python_source(root: Path, file_metadata: FileMetadata) -> _SemanticSource:
+    return _SemanticSource(
+        path=file_metadata.path,
+        content=read_repository_bytes(root, root / file_metadata.path),
+        metadata=file_metadata,
+    )
+
+
+def _input_fingerprint(
+    sources: list[_SemanticSource],
+    roots_key: str,
+    excluded_dirs: set[str],
+    embedding_model: str,
+    dimensions: int,
+) -> str:
+    payload = {
+        "version": "semantic-inputs-v1",
+        "file_policy_version": FILE_POLICY_VERSION,
+        "source_roots_key": roots_key,
+        "excluded_dirs": sorted(excluded_dirs),
+        # Keep requested settings distinct from the actual model/dimensions:
+        # a hashing fallback or fixed-width neural model can differ from these.
+        "embedding_model": embedding_model,
+        "dimensions": dimensions,
+        "files": [
+            (
+                source.path,
+                source.metadata.module_path if source.metadata else None,
+                hashlib.sha256(source.content).hexdigest(),
+            )
+            for source in sources
+        ],
+    }
+    return hashlib.sha256(json.dumps(payload, sort_keys=True).encode("utf-8")).hexdigest()
 
 
 def _load_sentence_transformer(model_name: str) -> Any | None:
@@ -281,7 +330,14 @@ def build_semantic_index(
     max_workers: int | None = None,
     *,
     source_roots: Sequence[str] | None = None,
+    cached_index: SemanticIndex | None = None,
 ) -> SemanticIndex:
+    """Build current embeddings, or reuse a supplied index when all inputs match.
+
+    Hash and chunk the same captured bytes so edits during embedding generation
+    cannot incorrectly mark an older snapshot as current. Cache hits still read
+    eligible files, but skip AST chunking and embedding generation.
+    """
     active_excluded_dirs = excluded_dirs if excluded_dirs is not None else EXCLUDED_DIRS
     index = scan_repository(
         repo_path,
@@ -290,18 +346,32 @@ def build_semantic_index(
         source_roots=source_roots,
     )
     root = Path(index.repo_root)
+    roots_key = source_roots_key(root, source_roots)
+    if max_workers == 1:
+        sources = [_read_python_source(root, file_metadata) for file_metadata in index.files]
+    else:
+        read_source = partial(_read_python_source, root)
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            sources = list(executor.map(read_source, index.files))
+    sources.extend(_document_sources(root, active_excluded_dirs))
+    fingerprint = _input_fingerprint(
+        sources, roots_key, active_excluded_dirs, embedding_model, dimensions
+    )
+    if (
+        cached_index is not None
+        and cached_index.repo_root == index.repo_root
+        and cached_index.file_policy_version == FILE_POLICY_VERSION
+        and cached_index.source_roots_key == roots_key
+        and cached_index.input_fingerprint == fingerprint
+    ):
+        return cached_index
 
     if max_workers == 1:
-        chunk_groups = [_chunks_for_metadata(root, file_metadata) for file_metadata in index.files]
+        chunk_groups = [_chunks_for_source(source) for source in sources]
     else:
-        chunk_builder = partial(_chunks_for_metadata, root)
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            chunk_groups = list(executor.map(chunk_builder, index.files))
-
-    all_chunks = [chunk for group in chunk_groups for chunk in group]
-
-    all_chunks.extend(_doc_chunks(root, active_excluded_dirs))
-    all_chunks = [chunk for chunk in all_chunks if chunk.text.strip()]
+            chunk_groups = list(executor.map(_chunks_for_source, sources))
+    all_chunks = [chunk for group in chunk_groups for chunk in group if chunk.text.strip()]
     all_chunks = _assign_chunk_ids(all_chunks)
 
     texts = [chunk.text for chunk in all_chunks]
@@ -314,8 +384,9 @@ def build_semantic_index(
         chunk_count=len(all_chunks),
         chunks=all_chunks,
         vectors=vectors,
-        source_roots_key=source_roots_key(repo_path, source_roots),
+        source_roots_key=roots_key,
         file_policy_version=FILE_POLICY_VERSION,
+        input_fingerprint=fingerprint,
     )
 
 
@@ -334,6 +405,7 @@ def write_semantic_index(index: SemanticIndex, output_path: Path) -> None:
         "vectors": index.vectors,
         "source_roots_key": index.source_roots_key,
         "file_policy_version": index.file_policy_version,
+        "input_fingerprint": index.input_fingerprint,
     }
     with output_path.open("w", encoding="utf-8") as file:
         json.dump(payload, file, indent=2)
@@ -353,6 +425,7 @@ def load_semantic_index(input_path: Path) -> SemanticIndex:
         vectors=payload["vectors"],
         source_roots_key=payload.get("source_roots_key", ""),
         file_policy_version=payload.get("file_policy_version", ""),
+        input_fingerprint=payload.get("input_fingerprint", ""),
     )
 
 
@@ -372,10 +445,17 @@ def _dot(left: list[float], right: list[float]) -> float:
 
 
 def search_semantic_index(index: SemanticIndex, query: str, top_k: int = 5) -> list[SemanticHit]:
+    """Rank chunks only when the query uses the index's embedding model and width."""
     if top_k <= 0:
         return []
 
-    query_vectors, _, _ = _embed_texts([query], index.model, index.dimensions)
+    query_vectors, _, query_model = _embed_texts([query], index.model, index.dimensions)
+    if query_model != index.model:
+        raise ValueError(
+            "Query embedding model does not match the index. Restore the index's model "
+            'and retry, or set search.embedding_model = "hashing-v1" in .strucin.toml '
+            "and rerun search with --refresh to rebuild all vectors."
+        )
     query_vector = query_vectors[0]
     if len(query_vector) != index.dimensions:
         raise ValueError(
