@@ -97,6 +97,28 @@ remain in memory with original names; use `use_cache=False` to prevent raw cache
 reads and writes. The low-level semantic index writer persists source text and
 should not be used for a safe export.
 
+## Dependency Security
+
+Security minimums are declared for dependencies identified by the September 2026
+audit, including transitive packages that an existing environment could retain:
+
+| Package | Minimum | Reason |
+|---------|---------|--------|
+| Pygments | 2.20.0 | [CVE-2026-4539](https://github.com/advisories/GHSA-5239-wwwm-4pmq) |
+| setuptools | 83.0.0 | [CVE-2026-59890](https://github.com/advisories/GHSA-h35f-9h28-mq5c), plus earlier package-index fixes |
+| PyTorch (embedding extras) | 2.13.0 | [CVE-2025-3000](https://github.com/advisories/GHSA-rrmf-rvhw-rf47) |
+| pytest (development) | 9.0.3 | [CVE-2025-71176](https://github.com/advisories/GHSA-6w46-j5rx-g56g) |
+
+Use pip 26.2 or newer when refreshing an existing environment. Dependency audits
+run on pull requests, pushes to main, and manual workflow dispatches. They check
+fresh resolutions and explicit direct minimum versions against current PyPI
+advisories; see [the audit instructions](CONTRIBUTING.md#dependency-audits).
+
+Advisories identify affected package versions, not proof that StrucIn exposes the
+affected code path. A passing audit covers the scanned versions and known
+advisories at that time. Model weights, live providers, and arbitrary pre-existing
+environments require separate validation.
+
 ## Reporting a Vulnerability
 
 If you discover a security vulnerability in StrucIn, please report it responsibly:

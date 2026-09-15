@@ -105,6 +105,11 @@ strucin analyze /path/to/myrepo --json > analysis-summary.json
 | `pip install strucin[ai]` | all of the above | Full AI feature set |
 | `pip install strucin[dev]` | pytest, ruff, mypy, coverage | Development tooling |
 
+The `embeddings` and `ai` extras require PyTorch 2.13 or newer. Published macOS
+wheels for these versions require Apple Silicon and macOS 14 or newer. On other
+Mac configurations, install the base package and use the hashing search backend.
+See [dependency auditing](CONTRIBUTING.md#dependency-audits) for security checks.
+
 ## Command Reference
 
 ### `init`

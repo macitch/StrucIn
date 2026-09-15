@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Raise security minimums for Pygments, setuptools, PyTorch, and pytest; audit resolved base, optional AI, development, and build dependencies in CI, including explicit direct minimum versions. Neural embedding extras now require PyTorch 2.13+ (Apple Silicon/macOS 14+ for macOS wheels).
 - Include CLI commands and the module entry point in coverage, with regression tests for startup, invalid inputs, empty search results, and dashboard server shutdown.
 - Correct complexity scores for boolean operators, match cases/guards, comprehensions, assertions, and exception handlers; document the rules and invalidate analysis caches computed with the previous rules.
 - Correct README quickstart paths for `explain` and `web`, and include the required development and narration dependencies in setup examples.
