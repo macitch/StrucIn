@@ -99,7 +99,6 @@ markers = [
 [tool.coverage.run]
 branch = true
 source = ["src/strucin"]
-omit = ["src/strucin/cli/main.py", "src/strucin/cli/__main__.py"]
 
 [tool.coverage.report]
 exclude_lines = [

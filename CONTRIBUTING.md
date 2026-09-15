@@ -17,7 +17,7 @@ pip install -e ".[dev,llm,embeddings]"
 
 ```bash
 # Unit tests (no API keys required)
-pytest
+pytest -m "not integration"
 
 # Integration tests (requires ANTHROPIC_API_KEY or OPENAI_API_KEY)
 pytest -m integration -v
@@ -32,13 +32,16 @@ mypy src/strucin
 
 ## Coverage
 
+Coverage measures the full Python package, including CLI commands and the module
+entry point. CI enforces the same 85% minimum on Python 3.11, 3.12, and 3.13.
+
 ```bash
-pytest --cov=src/strucin --cov-report=term-missing --cov-fail-under=85
+pytest -m "not integration" --cov=src/strucin --cov-report=term-missing --cov-fail-under=85
 ```
 
 ## PR Guidelines
 
 - One feature or fix per PR — keep scope focused
 - All new code must include tests
-- PRs must pass CI (lint, typecheck, test matrix on Python 3.11 and 3.12)
+- PRs must pass CI (lint, typecheck, test matrix on Python 3.11, 3.12, and 3.13)
 - Update `CHANGELOG.md` under `[Unreleased]` for user-visible changes

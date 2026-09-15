@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Include CLI commands and the module entry point in coverage, with regression tests for startup, invalid inputs, empty search results, and dashboard server shutdown.
 - Correct complexity scores for boolean operators, match cases/guards, comprehensions, assertions, and exception handlers; document the rules and invalidate analysis caches computed with the previous rules.
 - Correct README quickstart paths for `explain` and `web`, and include the required development and narration dependencies in setup examples.
 - Create dependency-graph and narration-metadata parent directories before writing either command's output artifacts, supporting independent nested output paths.
