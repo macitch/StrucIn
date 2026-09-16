@@ -69,7 +69,7 @@ _INIT_TEMPLATE = """\
 # report = "docs/REPORT.md"
 # semantic_index = "semantic_index.json"
 # explain_markdown = "docs/EXPLAIN.md"
-# explain_metadata = "docs/explain.json"
+# explain_metadata = "explain.json"
 
 [report]
 # fan_out_threshold = 5

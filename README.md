@@ -1,6 +1,5 @@
 [![CI](https://github.com/macitch/StrucIn/actions/workflows/ci.yml/badge.svg)](https://github.com/macitch/StrucIn/actions/workflows/ci.yml)
-[![PyPI version](https://img.shields.io/pypi/v/strucin)](https://pypi.org/project/strucin/)
-[![Python versions](https://img.shields.io/pypi/pyversions/strucin)](https://pypi.org/project/strucin/)
+[![Python: 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue)](pyproject.toml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)
 
@@ -8,7 +7,7 @@
 
 StrucIn analyzes local Python repositories and generates architecture
 artifacts you can use for technical discovery, refactoring planning, onboarding,
-and dependency risk review.
+and architectural dependency review.
 
 ## What StrucIn Provides
 
@@ -24,7 +23,7 @@ and dependency risk review.
 
 - Language: Python repositories
 - Input: local filesystem paths
-- Output: JSON and Markdown artifacts written to the target repository
+- Output: JSON, Markdown, and static dashboard files, normally written to the target repository
 
 ## Architecture Overview
 
@@ -37,21 +36,33 @@ and dependency risk review.
 
 ## Installation
 
-### 1. Create and activate a virtual environment
+Install from source; a StrucIn package has not yet been published on PyPI.
+These instructions and the security policy describe the current source checkout.
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/macitch/StrucIn.git
+cd StrucIn
+```
+
+### 2. Create and activate a virtual environment
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-### 2. Install development tooling
+### 3. Install StrucIn
 
 ```bash
-pip install --upgrade pip
-pip install -e ".[dev]"
+python -m pip install --upgrade "pip>=26.2"
+python -m pip install -e .
 ```
 
-### 3. Run the CLI
+For development and the checks below, use `python -m pip install -e ".[dev]"`.
+
+### 4. Run the CLI
 
 ```bash
 strucin --help
@@ -70,7 +81,7 @@ strucin report /path/to/myrepo     # writes docs/REPORT.md
 strucin explain --path /path/to/myrepo  # writes docs/EXPLAIN.md (template, no key needed)
 
 # Enable LLM-powered narration
-pip install -e ".[llm]"
+python -m pip install -e ".[llm]"
 export ANTHROPIC_API_KEY="sk-ant-..."
 strucin explain --path /path/to/myrepo  # writes docs/EXPLAIN.md
 
@@ -83,8 +94,8 @@ strucin diff before.json after.json
 # Machine-readable output
 strucin analyze /path/to/myrepo --json
 
-# Launch web dashboard
-strucin web --path /path/to/myrepo
+# Generate and serve the web dashboard
+strucin web --path /path/to/myrepo --serve
 ```
 
 With `--json`, `scan`, `analyze`, `search`, and `diff` write one JSON document to
@@ -98,12 +109,14 @@ strucin analyze /path/to/myrepo --json > analysis-summary.json
 
 ## Optional Dependencies
 
-| Extra | Installs | Enables |
+Run these commands from the cloned repository:
+
+| Install command | Installs | Enables |
 |-------|----------|---------|
-| `pip install strucin[llm]` | anthropic, openai | LLM-powered narration |
-| `pip install strucin[embeddings]` | sentence-transformers | Neural semantic search |
-| `pip install strucin[ai]` | all of the above | Full AI feature set |
-| `pip install strucin[dev]` | pytest, ruff, mypy, coverage | Development tooling |
+| `python -m pip install -e ".[llm]"` | anthropic, openai | LLM-powered narration |
+| `python -m pip install -e ".[embeddings]"` | sentence-transformers, PyTorch, setuptools | Neural semantic search |
+| `python -m pip install -e ".[ai]"` | all of the above | Full AI feature set |
+| `python -m pip install -e ".[dev]"` | pytest, ruff, mypy, coverage | Development tooling |
 
 The `embeddings` and `ai` extras require PyTorch 2.13 or newer. Published macOS
 wheels for these versions require Apple Silicon and macOS 14 or newer. On other
@@ -263,9 +276,18 @@ exclude_dirs = [".git", "__pycache__", "node_modules", "venv", ".venv"]
 [search]
 top_k = 5
 dimensions = 256
+embedding_model = "all-MiniLM-L6-v2"  # Use "hashing-v1" for local hashing without model downloads
 
 [performance]
 max_workers = 8
+executor = "auto"
+
+[lifecycle]
+cache_retention_days = 14
+
+[observability]
+structured_logging = false
+timing_enabled = true
 
 [output]
 repo_index = "repo_index.json"
@@ -280,6 +302,7 @@ explain_metadata = "explain.json"
 Notes:
 - `max_workers` controls parallel scanning/analysis/semantic indexing
 - By default, JSON artifacts are written to the target repo root; Markdown reports go to `docs/`
+- `cache_retention_days` also controls deletion of expired configured outputs, not just caches; copy snapshots you want to retain to a separate path
 
 Each output can use an independent nested path within the repository, such as
 `dependency_graph = "graphs/nested/dependencies.json"` or
@@ -374,12 +397,23 @@ an export; compare original snapshots with `diff --safe-mode`. See
 Run StrucIn in CI and post architecture reports as PR comments:
 
 ```yaml
-- uses: macitch/StrucIn@main
-  with:
-    command: report
-    post-comment: true
-    fail-on-cycles: false
+permissions:
+  contents: read
+  pull-requests: write
+
+steps:
+  - uses: actions/checkout@v4
+  - uses: macitch/StrucIn@main
+    with:
+      command: report
+      post-comment: "true"
+      fail-on-cycles: "false"
 ```
+
+Place this excerpt in a job triggered by `pull_request`. PR comments require a
+write-capable token; for read-only tokens, including typical fork PR workflows,
+set `post-comment: 'false'`. Use a reviewed commit SHA for reproducible Action and
+pre-commit installations; `main` follows development changes.
 
 Every Action command (`scan`, `analyze`, or `report`) produces fresh analysis
 and dependency graph JSON at the locations configured in `.strucin.toml`.
@@ -455,10 +489,18 @@ new rules can raise or lower scores without source edits.
 Run project checks:
 
 ```bash
-ruff check .
+ruff check src/ tests/
+ruff format --check src/ tests/
 mypy src/strucin
-pytest -q
+pytest -q -m "not integration" --cov=src/strucin --cov-report=term-missing --cov-fail-under=85
 ```
+
+CI runs lint, strict type checks, and tests on Python 3.11, 3.12, and 3.13.
+Coverage includes the CLI and module entry point. Dependency auditing covers
+base, optional AI, development, and build requirements; see
+[CONTRIBUTING.md](CONTRIBUTING.md#dependency-audits) for the audit matrix and commands.
+Live provider tests, neural-model quality checks, and real browser interactions
+are separate from the default test suite.
 
 ## Web Dashboard Usage
 
