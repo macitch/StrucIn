@@ -4,15 +4,27 @@
 
 | Version | Supported          |
 |---------|--------------------|
-| 0.1.x   | Yes                |
+| 0.1.x development line (latest source checkout) | Yes |
+
+StrucIn has not yet been published on PyPI. Fixes listed under `Unreleased` in
+[CHANGELOG.md](CHANGELOG.md) require an updated source checkout; older copies do
+not acquire those fixes automatically.
 
 ## How StrucIn Handles Your Code
 
-StrucIn performs **read-only static analysis** on your repository:
+StrucIn analyzes Python source without importing or executing the target project:
 
-- It reads Python files and parses their AST — it never executes your code.
-- Analysis artifacts (JSON, Markdown) are written to the target repository directory.
-- Cache files are stored in `.strucin_cache/` within the target repository.
+- It reads Python files and parses their AST.
+- Commands write or replace generated JSON, Markdown, and dashboard files.
+- StrucIn-managed cache files are stored in `.strucin_cache/` within the target repository.
+- Normal repository commands remove expired configured outputs and cache files
+  before running. `[lifecycle] cache_retention_days` defaults to 14 and applies
+  to both outputs and caches. Keep archival snapshots at separate paths.
+
+Normal-mode analysis and dashboard exports contain identifiers, paths, and
+docstrings. Semantic indexes also store source/document chunks alongside their
+vectors. Treat those files as repository content when deciding what to share;
+use safe mode for anonymized exports.
 
 ### Source and Documentation Links
 
@@ -34,7 +46,7 @@ reports, or indexes that may have included outside links.
 
 ### Artifact Destinations
 
-Configured outputs and automatic caches must stay within the target repository.
+Configured outputs and StrucIn-managed caches must stay within the target repository.
 Parent-directory segments (`..`) and symlinks that resolve outside that directory
 are rejected before writing or cleaning up artifacts. All configured destinations
 are checked before cleanup deletes any stale files.
@@ -44,12 +56,33 @@ directory. Generated dashboard files are confined to that selected directory.
 
 ### LLM Integration (Optional)
 
-When using the `explain` command with an API key:
+`explain` can call a provider when its SDK is installed and its API key is present
+in the process environment. Anthropic is checked first, then OpenAI. A cached
+result can avoid the call; unavailable providers or failed requests use the local
+template fallback. No separate confirmation is requested before a provider call.
 
-- A **limited context** (max 12,000 characters) of structural metadata is sent to the configured LLM provider (Anthropic or OpenAI).
-- **Secret redaction** is applied before any LLM call — 9 regex patterns strip passwords, API keys, tokens, private keys, and credential URLs from the payload.
-- No source code is sent — only module names, metrics, and docstrings.
-- LLM calls are opt-in and require explicit API key configuration.
+The JSON context is truncated to 12,000 characters, in addition to the prompt
+text. In normal mode it can include the repository root, file paths, module
+names, dependency cycles, metrics, and module docstrings. Whole source files are
+not uploaded, but docstrings can themselves contain code examples or sensitive text.
+
+Recognized secret patterns in docstrings are redacted before forming that context.
+Pattern matching is best effort, not a general guarantee that all secrets are
+removed from arbitrary content or identifiers. Safe mode omits docstrings and
+anonymizes identifiers before any provider call.
+
+### Neural Search and Local Serving
+
+The optional embedding backend runs `SentenceTransformer.encode` locally. Loading
+a model can download files and use the library's own cache outside the repository;
+StrucIn's artifact containment and retention rules do not manage that cache.
+Set `[search] embedding_model = "hashing-v1"` to avoid loading or downloading a
+neural model. Safe mode alone does not disable model loading.
+
+The dashboard server defaults to `127.0.0.1` and has no authentication or TLS.
+It serves the selected output directory, so use a dedicated directory and keep
+the loopback binding for local use. Binding to a network interface exposes its
+contents to machines that can reach that address.
 
 ### Safe Mode
 
@@ -97,6 +130,28 @@ remain in memory with original names; use `use_cache=False` to prevent raw cache
 reads and writes. The low-level semantic index writer persists source text and
 should not be used for a safe export.
 
+## Dependency Security
+
+Security minimums are declared for dependencies identified by the September 2026
+audit, including transitive packages that an existing environment could retain:
+
+| Package | Minimum | Reason |
+|---------|---------|--------|
+| Pygments | 2.20.0 | [CVE-2026-4539](https://github.com/advisories/GHSA-5239-wwwm-4pmq) |
+| setuptools | 83.0.0 | [CVE-2026-59890](https://github.com/advisories/GHSA-h35f-9h28-mq5c), plus earlier package-index fixes |
+| PyTorch (embedding extras) | 2.13.0 | [CVE-2025-3000](https://github.com/advisories/GHSA-rrmf-rvhw-rf47) |
+| pytest (development) | 9.0.3 | [CVE-2025-71176](https://github.com/advisories/GHSA-6w46-j5rx-g56g) |
+
+Use pip 26.2 or newer when refreshing an existing environment. Dependency audits
+run on pull requests, pushes to main, and manual workflow dispatches. They check
+fresh resolutions and explicit direct minimum versions against current PyPI
+advisories; see [the audit instructions](CONTRIBUTING.md#dependency-audits).
+
+Advisories identify affected package versions, not proof that StrucIn exposes the
+affected code path. A passing audit covers the scanned versions and known
+advisories at that time. Model weights, live providers, and arbitrary pre-existing
+environments require separate validation.
+
 ## Reporting a Vulnerability
 
 If you discover a security vulnerability in StrucIn, please report it responsibly:
@@ -116,7 +171,7 @@ The following are in scope for security reports:
 - Secret leakage through LLM calls or output artifacts
 - Path traversal in file scanning or artifact writing
 - Code execution through crafted Python files (AST parsing should never execute code)
-- Dependency vulnerabilities in core dependencies
+- Dependency vulnerabilities in the documented base and optional dependencies
 
 The following are out of scope:
 
