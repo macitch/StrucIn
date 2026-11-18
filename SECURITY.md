@@ -138,7 +138,8 @@ audit, including transitive packages that an existing environment could retain:
 | Package | Minimum | Reason |
 |---------|---------|--------|
 | Pygments | 2.20.0 | [CVE-2026-4539](https://github.com/advisories/GHSA-5239-wwwm-4pmq) |
-| setuptools | 83.0.0 | [CVE-2026-59890](https://github.com/advisories/GHSA-h35f-9h28-mq5c), plus earlier package-index fixes |
+| setuptools | 84.1.0 | [GHSA-xmj3-9gf7-h52w](https://github.com/advisories/GHSA-xmj3-9gf7-h52w), plus [CVE-2026-59890](https://github.com/advisories/GHSA-h35f-9h28-mq5c) and earlier package-index fixes |
+| sentence-transformers (embedding extras) | 5.6.0 | PYSEC-2026-4164 |
 | PyTorch (embedding extras) | 2.13.0 | [CVE-2025-3000](https://github.com/advisories/GHSA-rrmf-rvhw-rf47) |
 | pytest (development) | 9.0.3 | [CVE-2025-71176](https://github.com/advisories/GHSA-6w46-j5rx-g56g) |
 
